@@ -21,5 +21,5 @@ export interface UrlUtility {
 
 export const URL_UTILITY: UrlUtility = {
   authUrl: `${API_BASE_URL}api/auth/`,
-
+  adminUrl: `${API_BASE_URL}api/admin/`,
 }

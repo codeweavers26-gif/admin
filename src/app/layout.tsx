@@ -24,5 +24,24 @@ export default function RootLayout({
         <Footer />
       </body>
     </html>
+    // <html lang="en">
+    //   <body>
+    //     <div className="layout">
+    //       <aside className="sidebar">
+    //         {/* Sidebar */}
+    //         <h3 className="logo">SHOPPER</h3>
+
+    //         <div className="menu">
+    //           <button className="menu-item">🛒 Add Product</button>
+    //           <button className="menu-item">📦 Product List</button>
+    //         </div>
+    //       </aside>
+
+    //       <main className="content">
+    //         {children}
+    //       </main>
+    //     </div>
+    //   </body>
+    // </html>
   );
 }
