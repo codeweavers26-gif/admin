@@ -1,8 +1,11 @@
-import { addLocation, deactivateLocation, getLocations, updateLocation } from "@/src/services/authService/authService";
+import { addLocation, deactivateLocation, getInventorybyLocId, getLocations, updateLocation } from "@/src/services/authService/authService";
 import { useEffect, useMemo, useState } from "react";
 import { Box, TextField, Checkbox, FormControlLabel, Button, Modal } from "@mui/material";
 import BlockIcon from '@mui/icons-material/Block';
 import { MantineReactTable, MRT_ColumnDef, useMantineReactTable } from "mantine-react-table";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import { Drawer, Typography, IconButton } from "@mui/material";
 
 
 interface Location {
@@ -42,6 +45,12 @@ export default function LocationPage() {
 
   const [isEdit, setIsEdit] = useState(false);
 
+  const [inventoryData, setInventoryData] = useState<any[]>([]);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+
+
   const columns = useMemo<MRT_ColumnDef<Location>[]>(() => [
     { accessorKey: "name", header: "Name" },
     { accessorKey: "city", header: "City" },
@@ -52,7 +61,22 @@ export default function LocationPage() {
     { accessorKey: "deliveryDays", header: "Delivery Days" },
     { accessorKey: "codAvailable", header: "COD Available", Cell: ({ row }) => row.original.codAvailable ? "Yes" : "No", },
     { accessorKey: "extraShippingCharge", header: "Extra Shipping Charge" },
-    { accessorKey: "actions", header: "", Cell: ({ row }) => (<Button variant="contained" color="error" size="small" onClick={() => handleDeactivate(row.original.id)} startIcon={<BlockIcon />} />), },
+    { accessorKey: "actions", header: "Deactivate", Cell: ({ row }) => (<Button variant="contained" color="error" size="small" onClick={() => handleDeactivate(row.original.id)} startIcon={<BlockIcon />} />), },
+    {
+      id: "inventory",
+      header: "Inventory Status",
+      // size: 60,
+      Cell: ({ row }) => (
+        <IconButton
+          size="small"
+          color="primary"
+          onClick={() => handleViewInventory(row.original)}
+        >
+          <Inventory2OutlinedIcon fontSize="small" />
+        </IconButton>
+      ),
+    },
+
   ], []);
 
   const table = useMantineReactTable({
@@ -143,6 +167,25 @@ export default function LocationPage() {
       console.error("Error deactivating location:", error);
     }
   };
+
+  const handleViewInventory = async (location: Location) => {
+    setSelectedLocation(location);
+    setInventoryOpen(true);
+    setInventoryLoading(true);
+
+    try {
+      const res = await getInventorybyLocId(location.id);
+      if (res) {
+        setInventoryData(res || []);
+      }
+    } catch (error) {
+      console.error("Error fetching inventory:", error);
+      setInventoryData([]);
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
 
   return (
     <>
@@ -258,6 +301,99 @@ export default function LocationPage() {
           </Box>
         </Box>
       </Modal>
+
+      <Drawer
+        anchor="right"
+        open={inventoryOpen}
+        onClose={() => setInventoryOpen(false)}
+        PaperProps={{ sx: { width: 600 } }}
+      >
+        {/* Header */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            p: 2,
+            borderBottom: "1px solid #e0e0e0",
+          }}
+        >
+          <Typography variant="h6">
+            Inventory - {selectedLocation?.name}
+          </Typography>
+
+          <IconButton onClick={() => setInventoryOpen(false)}>
+            <CloseRoundedIcon />
+          </IconButton>
+        </Box>
+
+        <Box p={2}>
+          {inventoryLoading ? (
+            <Typography>Loading...</Typography>
+          ) : inventoryData.length === 0 ? (
+            <Typography>No inventory found</Typography>
+          ) : (
+            <Box>
+              {inventoryData.map((inv) => (
+                <Box
+                  key={inv.inventoryId}
+                  sx={{
+                    border: "1px solid #e0e0e0",
+                    borderRadius: 2,
+                    p: 2,
+                    mb: 2,
+                    background: "#fafafa",
+                  }}
+                >
+                  <Typography fontWeight={600}>
+                    {inv.productName}
+                  </Typography>
+
+                  <Box
+                    display="grid"
+                    gridTemplateColumns="repeat(2, 1fr)"
+                    gap={1}
+                    mt={1}
+                  >
+                    <Typography variant="body2">
+                      Stock: {inv.stock}
+                    </Typography>
+                    <Typography variant="body2">
+                      Available: {inv.availableStock}
+                    </Typography>
+                    <Typography variant="body2">
+                      Reserved: {inv.reservedStock}
+                    </Typography>
+                    <Typography variant="body2">
+                      Reorder Level: {inv.reorderLevel}
+                    </Typography>
+                  </Box>
+
+                  <Typography
+                    mt={1}
+                    sx={{
+                      fontWeight: 600,
+                      color:
+                        inv.stockStatus === "OUT_OF_STOCK"
+                          ? "error.main"
+                          : inv.stockStatus === "LOW_STOCK"
+                            ? "warning.main"
+                            : "success.main",
+                    }}
+                  >
+                    {inv.stockStatus}
+                  </Typography>
+
+                  <Typography variant="caption" color="text.secondary">
+                    Updated: {new Date(inv.lastUpdated).toLocaleString()}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Drawer>
+
     </>
   )
 }

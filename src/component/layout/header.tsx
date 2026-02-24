@@ -1,51 +1,18 @@
-// "use client";
-
-// import Link from "next/link";
-
-// export default function Header() {
-//   return (
-//     <header
-//       style={{
-//         height: "45px",
-//         background: "#b3aec7ff",
-//         color: "#fff",
-//         display: "flex",
-//         alignItems: "center",
-//         justifyContent: "space-between",
-//         padding: "0 20px",
-//       }}
-//     >
-//       <h3>Admin Panel</h3>
-//       <div style={{ fontSize: 20, fontWeight: 700 }}>
-//         RichNRetired
-//       </div>
-
-//       <nav style={{ display: "flex", gap: "20px" }}>
-//         <Link href="auth/login">Login</Link>
-//       </nav>
-//     </header>
-//   );
-// }
-
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import {
-  Notifications,
-  AccountCircle,
-  Menu as MenuIcon
-} from "@mui/icons-material";
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Box,
-  Avatar,
-  Tooltip
-} from "@mui/material";
+import { useEffect, useState } from "react";
+import { Notifications, Menu as MenuIcon } from "@mui/icons-material";
+import { AppBar, Toolbar, Typography, IconButton, Box, Avatar, Tooltip } from "@mui/material";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
+
+  const pathname = usePathname();
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRefreshToken(localStorage.getItem("refreshToken"));
+  }, [pathname]);
 
   return (
     <AppBar
@@ -61,17 +28,6 @@ export default function Header() {
       <Toolbar sx={{ height: "100%", gap: 2 }}>
         {/* Logo */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          {/* <IconButton
-            size="large"
-            sx={{
-              color: "white",
-              background: "rgba(255,255,255,0.2)",
-              "&:hover": { background: "rgba(255,255,255,0.3)" },
-              transition: "all 0.3s ease"
-            }}
-          >
-            <MenuIcon />
-          </IconButton> */}
           <Typography
             variant="h5"
             fontWeight={800}
@@ -125,30 +81,32 @@ export default function Header() {
         </Tooltip>
 
         {/* Login Button */}
-        <Link
-          href="/auth/login"
-          style={{
-            textDecoration: "none",
-            padding: "8px 20px",
-            borderRadius: "20px",
-            background: "rgba(255,255,255,0.15)",
-            color: "white",
-            fontWeight: 600,
-            letterSpacing: "0.5px",
-            border: "1px solid rgba(255,255,255,0.2)",
-            transition: "all 0.3s ease",
-            display: "inline-block"
-          }}
-        >
-          Login
-          <style jsx>{`
+        {!refreshToken && (
+          <Link
+            href="/auth/login"
+            style={{
+              textDecoration: "none",
+              padding: "8px 20px",
+              borderRadius: "20px",
+              background: "rgba(255,255,255,0.15)",
+              color: "white",
+              fontWeight: 600,
+              letterSpacing: "0.5px",
+              border: "1px solid rgba(255,255,255,0.2)",
+              transition: "all 0.3s ease",
+              display: "inline-block"
+            }}
+          >
+            Login
+            <style jsx>{`
             a:hover {
               background: rgba(255,255,255,0.25) !important;
               transform: translateY(-2px) !important;
               box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
             }
           `}</style>
-        </Link>
+          </Link>
+        )}
       </Toolbar>
     </AppBar>
   );

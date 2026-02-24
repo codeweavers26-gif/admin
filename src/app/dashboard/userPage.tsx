@@ -1,7 +1,7 @@
 import { Box, Button, Stack, TextField } from "@mui/material";
 import { MantineReactTable, MRT_ColumnDef, useMantineReactTable } from "mantine-react-table";
 import { useState, useMemo } from "react";
-import { getOrdersByUserId, getReturnsByUserId, getUsers } from "../../services/authService/authService";
+import { getCartbyUserId, getOrdersByUserId, getReturnsByUserId, getUsers } from "../../services/authService/authService";
 import { Drawer, Loader, Text } from "@mantine/core";
 import { IconButton, Tooltip } from "@mui/material";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -39,6 +39,10 @@ export default function UserPage() {
 
   const [returns, setReturns] = useState<any[]>([]);
   const [returnsLoading, setReturnsLoading] = useState(false);
+
+  const [cart, setCart] = useState<any | null>(null);
+  const [cartLoading, setCartLoading] = useState(false);
+
 
 
   const columns = useMemo<MRT_ColumnDef<UserType>[]>(() => [
@@ -111,20 +115,19 @@ export default function UserPage() {
 
     setOrdersLoading(true);
     setReturnsLoading(true);
+    setCartLoading(true);
 
     try {
-      const [ordersRes, returnsRes] = await Promise.all([
+      const [ordersRes, returnsRes, cartRes] = await Promise.all([
         getOrdersByUserId(user.id),
         getReturnsByUserId(user.id),
+        getCartbyUserId(user.id),
       ]);
 
-      if (ordersRes) {
-        setOrders(ordersRes.content);
-      }
+      if (ordersRes) setOrders(ordersRes.content);
+      if (returnsRes) setReturns(returnsRes.content);
 
-      if (returnsRes) {
-        setReturns(returnsRes.content);
-      }
+      if (cartRes) setCart(cartRes);
     } catch (err) {
       console.error("Error fetching orders/returns");
     } finally {
@@ -171,34 +174,6 @@ export default function UserPage() {
       <Box mt={1} sx={{ height: "75vh" }}>
         <MantineReactTable table={table} />
       </Box>
-      {/* <Drawer
-        opened={drawerOpened}
-        onClose={() => setDrawerOpened(false)}
-        title={`Orders - ${selectedUser?.name || ""}`}
-        position="right"
-        size="lg"
-      >
-        {ordersLoading ? (
-          <Loader />
-        ) : orders.length === 0 ? (
-          <Text>No orders found</Text>
-        ) : (
-          orders.map((order) => (
-            <Box
-              key={order.orderId}
-              mb={2}
-              p={2}
-              sx={{ border: "1px solid #ddd", borderRadius: 4 }}
-            >
-              <div><strong>Order ID:</strong> {order.orderId}</div>
-              <div><strong>Status:</strong> {order.status}</div>
-              <div><strong>Payment:</strong> {order.paymentStatus}</div>
-              <div><strong>Total:</strong> ₹{order.totalAmount}</div>
-              <div><strong>Date:</strong> {new Date(order.createdAt).toLocaleString()}</div>
-            </Box>
-          ))
-        )}
-      </Drawer> */}
       <Drawer
         opened={drawerOpened}
         onClose={() => setDrawerOpened(false)}
@@ -206,6 +181,77 @@ export default function UserPage() {
         position="right"
         size="lg"
       >
+
+        {/* ---------------- CART SECTION ---------------- */}
+        <Box mt={4}>
+          <h3>Cart</h3>
+
+          {cartLoading ? (
+            <Loader size="sm" />
+          ) : !cart || !cart.items || cart.items.length === 0 ? (
+            <Text size="sm">Cart is empty</Text>
+          ) : (
+            <>
+              {/* Cart Summary */}
+              <Box
+                mb={2}
+                p={2}
+                sx={{ border: "1px solid #e3f2fd", borderRadius: 6 }}
+              >
+                <div><strong>Total Items:</strong> {cart.totalItems}</div>
+                <div><strong>Total Quantity:</strong> {cart.totalQuantity}</div>
+                <div><strong>Total Value:</strong> ₹{cart.totalValue}</div>
+                <div>
+                  <strong>Last Activity:</strong>{" "}
+                  {new Date(cart.lastActivity).toLocaleString()}
+                </div>
+              </Box>
+
+              {/* Cart Items */}
+              {cart.items.map((item: any) => (
+                <Box
+                  key={item.cartId}
+                  mb={2}
+                  p={2}
+                  sx={{
+                    border: "1px solid #f0f0f0",
+                    borderRadius: 6,
+                    display: "flex",
+                    gap: 2,
+                    alignItems: "center",
+                  }}
+                >
+                  <img
+                    src={item.productImage}
+                    alt={item.productName}
+                    width={60}
+                    height={60}
+                    style={{ objectFit: "cover", borderRadius: 4 }}
+                  />
+
+                  <Box>
+                    <div><strong>{item.productName}</strong></div>
+                    <div>Price: ₹{item.productPrice}</div>
+                    <div>Quantity: {item.quantity}</div>
+                    <div>Subtotal: ₹{item.subtotal}</div>
+                    <div>
+                      Status:{" "}
+                      {item.inStock ? (
+                        <span style={{ color: "green" }}>In Stock</span>
+                      ) : (
+                        <span style={{ color: "red" }}>Out of Stock</span>
+                      )}
+                    </div>
+                    <div>
+                      Added: {new Date(item.addedAt).toLocaleString()}
+                    </div>
+                  </Box>
+                </Box>
+              ))}
+            </>
+          )}
+        </Box>
+
         {/* ---------------- ORDERS SECTION ---------------- */}
         <Box mb={4}>
           <h3>Orders</h3>

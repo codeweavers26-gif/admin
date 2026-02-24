@@ -1,7 +1,8 @@
-import { addSubCategory, getSubCategories } from "@/src/services/authService/authService";
-import { Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, TextField } from "@mui/material";
+import { addSubCategory, getSubCategories, getAllAttribute } from "@/src/services/authService/authService";
+import { Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Typography, FormControlLabel, TextField, Divider } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { useEffect, useState } from "react";
+import { MantineReactTable, MRT_ColumnDef, useMantineReactTable } from "mantine-react-table";
+import { useEffect, useMemo, useState } from "react";
 
 interface SubCategoryPageProps {
   categoryId: string;
@@ -22,6 +23,12 @@ interface CreateSubCategory {
   name: string;
   active: boolean;
 }
+
+interface Attribute {
+  id: string;
+  name: string;
+  filterable: boolean;
+}
 export default function SubCategoryPage({ categoryId }: SubCategoryPageProps) {
 
   const [loading, setLoading] = useState(false);
@@ -31,8 +38,57 @@ export default function SubCategoryPage({ categoryId }: SubCategoryPageProps) {
   const [formData, setFormData] = useState<CreateSubCategory>({ name: "", active: true });
   const [submitLoading, setSubmitLoading] = useState(false);
 
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+
+  const columns = useMemo<MRT_ColumnDef<SubCategory>[]>(() => [
+    { accessorKey: "name", header: "Name" },
+    { accessorKey: "isActive", header: "Active", Cell: ({ row }) => row.original.isActive ? "Yes" : "No", },
+  ], []);
+
+  const table = useMantineReactTable({
+    columns,
+    data: subCategories,
+    rowCount: subCategories.length,
+    manualPagination: true,
+    // onPaginationChange: setPagination,
+    // state: { pagination, isLoading: loading },
+    enableStickyHeader: true,
+    enableColumnOrdering: true,
+    enableColumnResizing: true,
+    enableColumnPinning: true,
+    enableRowVirtualization: true,
+    initialState: {
+      density: 'xs',
+    },
+    mantineTableContainerProps: {
+      sx: { maxHeight: "80vh", overflowX: "auto" },
+    },
+  });
+
+  const attributeColumns = useMemo<MRT_ColumnDef<Attribute>[]>(() => [
+    { accessorKey: "id", header: "ID", size: 120 },
+    { accessorKey: "name", header: "Attribute Name", flex: 1 },
+  ], []);
+
+  const attributesTable = useMantineReactTable({
+    columns: attributeColumns,
+    data: attributes,
+    rowCount: attributes.length,
+    enableStickyHeader: true,
+    enableColumnOrdering: true,
+    enableColumnResizing: true,
+    initialState: {
+      density: 'xs',
+    },
+    mantineTableContainerProps: {
+      sx: { maxHeight: "40vh", overflowX: "auto" }, // Half height
+    },
+  });
+
+
   useEffect(() => {
     getSubCategoriesData();
+    getAttributesData();
   }, [])
 
   const getSubCategoriesData = async () => {
@@ -49,6 +105,20 @@ export default function SubCategoryPage({ categoryId }: SubCategoryPageProps) {
       setLoading(false);
     }
   }
+  const getAttributesData = async () => {
+    try {
+      setLoading(true);
+      const res = await getAllAttribute();
+      if (res) {
+        setAttributes(res.content || res || []);
+      }
+    } catch (error) {
+      console.error("Error getting Attributes", error);
+      setAttributes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (field: keyof CreateSubCategory, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -95,19 +165,20 @@ export default function SubCategoryPage({ categoryId }: SubCategoryPageProps) {
             Add Sub Category
           </Button>
         </Box>
-        <DataGrid
-          rows={subCategories}
-          columns={columns}
-          loading={loading}
-          getRowId={(row) => row.id}
-          autoHeight
-          // paginationModel={paginationModel}
-          // onPaginationModelChange={setPaginationModel}
-          rowCount={subCategories.length}
-          // onRowDoubleClick={(params) => onOpenSubCategory(params.row.id)}
-          localeText={{ noRowsLabel: "No records found" }}
-        />
+        <Box mt={1} sx={{ height: "75vh" }}>
+          <MantineReactTable table={table} />
+        </Box>
       </Box>
+      <Divider sx={{ my: 3 }} />
+      <Box>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">Available Attributes ({attributes.length})</Typography>
+        </Box>
+        <Box sx={{ height: "35vh" }}>
+          <MantineReactTable table={attributesTable} />
+        </Box>
+      </Box>
+      {/* </Box > */}
 
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
         <DialogTitle>Add New SubCategory</DialogTitle>

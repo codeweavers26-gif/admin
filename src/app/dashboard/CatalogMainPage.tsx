@@ -5,13 +5,13 @@ import CategoryPage from "./CategoryPage";
 import SubCategoryPage from "./SubCategoryPage";
 import AttributePage from "./AttributePage";
 
-const CATALOG_ORDER = ["SECTION", "CATEGORY", "SUB_CATEGORY", "ATTRIBUTE"] as const;
+const CATALOG_ORDER = ["SECTION", "CATEGORY", "SUB_CATEGORY"] as const;
 
 const TAB_DATA: Record<string, { label: string }> = {
   SECTION: { label: "Section" },
   CATEGORY: { label: "Category" },
   SUB_CATEGORY: { label: "Sub Category" },
-  ATTRIBUTE: { label: "Attribute" },
+  // ATTRIBUTE: { label: "Attribute" },
 };
 
 export default function CatalogMainPage() {
@@ -23,7 +23,7 @@ export default function CatalogMainPage() {
       SECTION: sectionId,
       CATEGORY: null,
       SUB_CATEGORY: null,
-      ATTRIBUTE: null,
+      // ATTRIBUTE: null,
     });
 
     setSelectedTab("CATEGORY");
@@ -34,7 +34,7 @@ export default function CatalogMainPage() {
       ...prev,
       CATEGORY: categoryId,
       SUB_CATEGORY: null,
-      ATTRIBUTE: null,
+      // ATTRIBUTE: null,
     }));
 
     setSelectedTab("SUB_CATEGORY");
@@ -57,8 +57,8 @@ export default function CatalogMainPage() {
           <SubCategoryPage categoryId={selections.CATEGORY!} />
         );
 
-      case "ATTRIBUTE":
-        return <AttributePage />;
+      // case "ATTRIBUTE":
+      //   return <AttributePage />;
 
       default:
         return null;

@@ -1,5 +1,6 @@
 import { URL_UTILITY } from "../../utls/urlUtls";
 import { postApi, getApi, putApi, deleteApi } from "../../utls/http";
+import axios from "axios";
 
 export async function userRegisterApi(payload: any) {
   const url = URL_UTILITY.authUrl + "register";
@@ -28,10 +29,22 @@ export async function adminlogout(payload: {
   return await postApi(url, payload);
 }
 
+// export async function addProduct(payload: any) {
+//   const url = URL_UTILITY.adminUrl + "products";
+//   return await postApi(url, payload);
+// }
 export async function addProduct(payload: any) {
   const url = URL_UTILITY.adminUrl + "products";
-  return await postApi(url, payload);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    body: payload,
+  });
+  return await response.json();
 }
+
 export async function updateProduct(id: string, payload: any) {
   const url = URL_UTILITY.adminUrl + `products/${id}`;
   return await putApi(url, payload);
@@ -131,4 +144,44 @@ export async function getReturnsByUserId(id: string) {
 export async function getInventories() {
   const url = URL_UTILITY.adminUrl + `inventory`;
   return await getApi(url);
+}
+export async function getOutOfStockInventories() {
+  const url = URL_UTILITY.adminUrl + `inventory/out-of-stock`;
+  return await getApi(url);
+}
+export async function getLowStockInventories() {
+  const url = URL_UTILITY.adminUrl + `inventory/low-stock`;
+  return await getApi(url);
+}
+export async function addInventory(payload: any) {
+  const url = URL_UTILITY.adminUrl + "inventory";
+  return await postApi(url, payload);
+}
+export async function getAllAttribute() {
+  const url = URL_UTILITY.adminUrl + `catalog/attributes`;
+  return await getApi(url);
+}
+export async function updateInventory(id: string, payload: object) {
+  const url = URL_UTILITY.adminUrl + `inventory/${id}/adjust`;
+  return await putApi(url, payload);
+}
+export async function getCartbyUserId(user_id: string) {
+  const url = URL_UTILITY.adminUrl + `carts/user/${user_id}`;
+  return await getApi(url);
+}
+export async function getInventorybyProductId(prod_id: string) {
+  const url = URL_UTILITY.adminUrl + `inventory/product/${prod_id}`;
+  return await getApi(url);
+}
+export async function getInventorybyLocId(loc_id: string) {
+  const url = URL_UTILITY.adminUrl + `inventory/location/${loc_id}`;
+  return await getApi(url);
+}
+export async function getAllReturns() {
+  const url = URL_UTILITY.adminUrl + `returns?page=0&size=1000`;
+  return await getApi(url);
+}
+export async function updateReturnStatus(id: any, payload: any) {
+  const url = URL_UTILITY.adminUrl + `returns/${id}`;
+  return await putApi(url, payload);
 }
