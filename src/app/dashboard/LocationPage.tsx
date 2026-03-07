@@ -155,7 +155,7 @@ export default function LocationPage() {
 
   const handleDeactivate = async (id: string) => {
     const confirm = window.confirm(
-      "Are you sure you want to deactivate this product?"
+      "Are you sure you want to deactivate this Location?"
     );
 
     if (!confirm) return;

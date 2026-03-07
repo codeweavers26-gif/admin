@@ -118,14 +118,14 @@ export default function UserPage() {
     setCartLoading(true);
 
     try {
-      const [ordersRes, returnsRes, cartRes] = await Promise.all([
+      const [ordersRes, cartRes] = await Promise.all([
         getOrdersByUserId(user.id),
-        getReturnsByUserId(user.id),
+        // getReturnsByUserId(user.id),
         getCartbyUserId(user.id),
       ]);
 
       if (ordersRes) setOrders(ordersRes.content);
-      if (returnsRes) setReturns(returnsRes.content);
+      // if (returnsRes) setReturns(returnsRes.content);
 
       if (cartRes) setCart(cartRes);
     } catch (err) {
@@ -133,6 +133,7 @@ export default function UserPage() {
     } finally {
       setOrdersLoading(false);
       setReturnsLoading(false);
+      setCartLoading(false);
     }
   };
 

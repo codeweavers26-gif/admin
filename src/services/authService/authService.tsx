@@ -29,21 +29,21 @@ export async function adminlogout(payload: {
   return await postApi(url, payload);
 }
 
-// export async function addProduct(payload: any) {
-//   const url = URL_UTILITY.adminUrl + "products";
-//   return await postApi(url, payload);
-// }
 export async function addProduct(payload: any) {
   const url = URL_UTILITY.adminUrl + "products";
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    },
-    body: payload,
-  });
-  return await response.json();
+  return await postApi(url, payload);
 }
+// export async function addProduct(payload: any) {
+//   const url = URL_UTILITY.adminUrl + "products";
+//   const response = await fetch(url, {
+//     method: "POST",
+//     headers: {
+//       'Authorization': `Bearer ${localStorage.getItem('token')}`
+//     },
+//     body: payload,
+//   });
+//   return await response.json();
+// }
 
 export async function updateProduct(id: string, payload: any) {
   const url = URL_UTILITY.adminUrl + `products/${id}`;
@@ -55,6 +55,10 @@ export async function deactivateProduct(id: string) {
 }
 export async function getProduct() {
   const url = URL_UTILITY.adminUrl + "products";
+  return await getApi(url);
+}
+export async function getProductById(id: number) {
+  const url = URL_UTILITY.adminUrl + `products/${id}`;
   return await getApi(url);
 }
 export async function getDashboardMetrics() {
@@ -166,7 +170,7 @@ export async function updateInventory(id: string, payload: object) {
   return await putApi(url, payload);
 }
 export async function getCartbyUserId(user_id: string) {
-  const url = URL_UTILITY.adminUrl + `carts/user/${user_id}`;
+  const url = URL_UTILITY.adminUrl + `carts/users/${user_id}`;
   return await getApi(url);
 }
 export async function getInventorybyProductId(prod_id: string) {
@@ -184,4 +188,32 @@ export async function getAllReturns() {
 export async function updateReturnStatus(id: any, payload: any) {
   const url = URL_UTILITY.adminUrl + `returns/${id}`;
   return await putApi(url, payload);
+}
+export async function activateProductbyId(id: any) {
+  const url = URL_UTILITY.adminUrl + `products/${id}/activate`;
+  return await postApi(url);
+}
+export async function addVarients(id: any, payload: any) {
+  const url = URL_UTILITY.adminUrl + `products/${id}/variants`;
+  return await postApi(url, payload);
+}
+export async function addImages(id: any, payload: any) {
+  const url = URL_UTILITY.adminUrl + `products/${id}/upload-images`;
+  return await postApi(url, payload);
+}
+export async function getCartSummary() {
+  const url = URL_UTILITY.adminUrl + `carts/summaries`;
+  return await getApi(url);
+}
+export async function getAbandonedCart() {
+  const url = URL_UTILITY.adminUrl + `carts/abandoned`;
+  return await getApi(url);
+}
+export async function deactivateProductbyId(id: string) {
+  const url = URL_UTILITY.adminUrl + `products/${id}`;
+  return await deleteApi(url);
+}
+export async function deactivateVariantById(id: any) {
+  const url = URL_UTILITY.adminUrl + `products/variants/${id}`;
+  return await deleteApi(url);
 }

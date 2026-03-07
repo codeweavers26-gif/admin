@@ -1,621 +1,637 @@
-import { addProduct, deactivateProduct, getInventorybyProductId, getProduct, updateProduct } from "@/src/services/authService/authService";
-import { Box, Button, Drawer, IconButton, Tooltip, Typography } from "@mui/material";
-import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  MantineReactTable,
-  useMantineReactTable,
-  type MRT_ColumnDef,
-  type MRT_Row,
-} from "mantine-react-table";
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, } from "@mui/material";
-import BlockIcon from '@mui/icons-material/Block';
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import { Box, Chip, Typography, Button, Dialog, DialogContent, DialogTitle, IconButton, Tooltip, TextField, } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import { MantineReactTable, MRT_ColumnDef, useMantineReactTable, } from "mantine-react-table";
+import type { ExpandedState } from '@tanstack/react-table';
+import { activateProductbyId, addImages, addVarients, deactivateProductbyId, deactivateVariantById, getProduct, getProductById } from "@/src/services/authService/authService";
+import AddIcon from '@mui/icons-material/Add';
+import AddProductPage from "./addProduct";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import AddCircleIcon from "@mui/icons-material/AddCircle";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
+import BlockIcon from "@mui/icons-material/Block";
 
-interface Product {
-  id: string;
+interface Category {
+  id: number;
   name: string;
-  brand: string;
-  sku: string;
   slug: string;
-  description: string;
-  mrp: string;
-  price: string;
-  stock: string;
-  weight: string;
-  length: string;
-  width: string;
-  height: string;
-  returnable: boolean;
-  images: File[];
-  short_description: string;
-  discount_percent: string;
-  tax_percent: string;
-  cod_available: boolean;
-  delivery_days: string;
 }
 
-const initalProduct: Product = {
-  id: "",
-  name: "",
-  brand: "",
-  sku: "",
-  slug: "",
-  description: "",
-  mrp: "",
-  price: "",
-  stock: "",
-  weight: "",
-  length: "",
-  width: "",
-  height: "",
-  returnable: true,
-  images: [],
-  short_description: "",
-  discount_percent: "",
-  tax_percent: "",
-  cod_available: true,
-  delivery_days: "",
+interface Product {
+  status: string | null;
+  id: number;
+  name: string;
+  brand: string;
+  sku: string | null;
+  slug: string;
+  description: string | null;
+  mrp: number | null;
+  price: number;
+  stock: number;
+  returnable: boolean | null;
+  weight: number | null;
+  length: number | null;
+  width: number | null;
+  height: number | null;
+  attributes: any;
+  category: Category;
+  variants: any;
+  images: any;
+  short_description: string;
+  discount_percent: number | null;
+  tax_percent: number | null;
+  in_stock: boolean;
+  stock_status: string | null;
+  average_rating: number | null;
+  total_reviews: number | null;
+  cod_available: boolean | null;
+  delivery_days: number | null;
+  main_image: string;
+  thumbnail_image: string;
+  medium_image: string | null;
+  is_active: boolean;
+  created_at: string | null;
 }
 
 export default function ProductPage() {
-
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [product, setProduct] = useState<Product>(initalProduct);
-  const [open, setOpen] = useState(false);
+  const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
+  const [expanded, setExpanded] = useState<ExpandedState>({});
 
-  const [isEdit, setIsEdit] = useState(false);
+  const [openAddModal, setOpenAddModal] = useState(false);
 
-  const [inventoryData, setInventoryData] = useState<any[]>([]);
-  const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [variantDialogOpen, setVariantDialogOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
 
+  const [variantForm, setVariantForm] = useState({ size: "", color: "", mrp: "", price: "", sellingPrice: "", costPrice: "", initialStock: "" });
+
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [selectedImageProductId, setSelectedImageProductId] = useState<number | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
   const columns = useMemo<MRT_ColumnDef<Product>[]>(() => [
-    { accessorKey: "name", header: "Product Name" },
-    { accessorKey: "brand", header: "Brand" },
-    { accessorKey: "sku", header: "SKU" },
-    { accessorKey: "slug", header: "Slug" },
-    { accessorKey: "description", header: "Description" },
-    { accessorKey: "mrp", header: "MRP" },
-    { accessorKey: "price", header: "Price" },
-    { accessorKey: "stock", header: "Stock" },
-    { accessorKey: "weight", header: "Weight" },
-    { accessorKey: "length", header: "Length" },
-    { accessorKey: "width", header: "Width" },
-    { accessorKey: "height", header: "Height" },
-    { accessorKey: "short_description", header: "Short Description" },
-    { accessorKey: "discount_percent", header: "Discount %" },
-    { accessorKey: "tax_percent", header: "Tax %" },
-    { accessorKey: "delivery_days", header: "Delivery Days" },
-    { accessorKey: "returnable", header: "Returnable", Cell: ({ row }) => row.original.returnable ? "Yes" : "No", },
-    { accessorKey: "cod_available", header: "COD Available", Cell: ({ row }) => row.original.cod_available ? "Yes" : "No", },
-    { accessorKey: "actions", header: "Deactivate", Cell: ({ row }) => (<Button variant="contained" color="error" size="small" onClick={() => handleDeactivate(row.original.id)} startIcon={<BlockIcon />} />), },
     {
-      id: "inventory",
-      header: "Inventory Status",
-      // size: 60,
+      id: "variants", header: "Variants",
       Cell: ({ row }) => (
-        <Tooltip title="View Inventory">
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => handleToggleVariants(row)}
+        >
+          {row.getIsExpanded() ? "Hide Variants" : "View Variants"}
+        </Button>
+      ),
+    },
+    {
+      header: "Activate",
+      size: 80,
+      Cell: ({ row }) => (
+        <Tooltip title="Activate">
           <IconButton
-            size="small"
             color="primary"
-            onClick={() => handleViewInventory(row.original.id)}
+            size="small"
+            onClick={() => activateProduct(row.original)}
           >
-            <Inventory2OutlinedIcon fontSize="small" />
+            <CheckCircleIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       ),
     },
+    {
+      header: "Deactivate",
+      size: 80,
+      Cell: ({ row }) => (
+        <Tooltip title="Deactivate">
+          <IconButton
+            color="error"
+            size="small"
+            onClick={() => deactivateProduct(row.original)}
+          >
+            <BlockIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
+    {
+      header: "Add Variant",
+      size: 100,
+      Cell: ({ row }) => (
+        <Tooltip title="Add Variant">
+          <IconButton
+            color="secondary"
+            size="small"
+            onClick={() => {
+              setSelectedProductId(row.original.id);
+              setVariantDialogOpen(true);
+            }}
+          >
+            <AddCircleIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
+    {
+      header: "Add Images",
+      size: 100,
+      Cell: ({ row }) => (
+        <Tooltip title="Add Images">
+          <IconButton
+            color="secondary"
+            size="small"
+            onClick={() => {
+              setSelectedImageProductId(row.original.id);
+              setImageDialogOpen(true);
+            }}
+          >
+            <PhotoCameraIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
+    { accessorKey: "id", header: "ID" },
+    { accessorKey: "status", header: "Status" },
+    { accessorKey: "name", header: "Name" },
+    { accessorKey: "brand", header: "Brand" },
+    { accessorKey: "sku", header: "SKU" },
+    { accessorKey: "slug", header: "Slug" },
+    { accessorKey: "description", header: "Description" },
+    { accessorKey: "short_description", header: "Short Description" },
+    { accessorKey: "mrp", header: "MRP" },
+    { accessorKey: "price", header: "Price", Cell: ({ row }) => `₹${row.original.price}`, },
+    { accessorKey: "stock", header: "Stock" },
+    {
+      accessorKey: "in_stock", header: "In Stock", Cell: ({ row }) => (
+        <Chip
+          label={row.original.in_stock ? "Yes" : "No"}
+          color={row.original.in_stock ? "success" : "error"}
+          size="small"
+        />
+      ),
+    },
+    { accessorKey: "stock_status", header: "Stock Status" },
+    { accessorKey: "returnable", header: "Returnable", Cell: ({ row }) => row.original.returnable !== null ? row.original.returnable ? "Yes" : "No" : "-", },
+    { accessorKey: "weight", header: "Weight" },
+    { accessorKey: "length", header: "Length" },
+    { accessorKey: "width", header: "Width" },
+    { accessorKey: "height", header: "Height" },
+    { accessorKey: "discount_percent", header: "Discount %" },
+    { accessorKey: "tax_percent", header: "Tax %" },
+    { accessorKey: "average_rating", header: "Rating", },
+    { accessorKey: "total_reviews", header: "Reviews", },
+    { accessorKey: "cod_available", header: "COD", Cell: ({ row }) => row.original.cod_available !== null ? row.original.cod_available ? "Yes" : "No" : "-", },
+    { accessorKey: "delivery_days", header: "Delivery Days" },
+    { accessorKey: "category.name", header: "Category", Cell: ({ row }) => row.original.category?.name || "-", },
+    { accessorKey: "category.slug", header: "Category Slug", Cell: ({ row }) => row.original.category?.slug || "-", },
+    {
+      accessorKey: "is_active", header: "Active", Cell: ({ row }) => (
+        <Chip
+          label={row.original.is_active ? "Active" : "Inactive"}
+          color={row.original.is_active ? "primary" : "default"}
+          size="small"
+        />
+      ),
+    },
+    { accessorKey: "created_at", header: "Created At", Cell: ({ row }) => row.original.created_at ? new Date(row.original.created_at).toLocaleString() : "-", },
   ], []);
 
   const table = useMantineReactTable({
     columns,
     data: products,
-    rowCount: products.length,
-    manualPagination: true,
-    // onPaginationChange: setPagination,
-    // state: { pagination, isLoading: loading },
     enableStickyHeader: true,
-    enableColumnOrdering: true,
-    enableColumnResizing: true,
-    enableColumnPinning: true,
-    enableRowVirtualization: true,
-    initialState: {
-      density: 'xs',
+    initialState: { density: "xs" },
+    enableExpanding: true,
+    state: { expanded },
+    onExpandedChange: setExpanded,
+    renderDetailPanel: ({ row }) => {
+      const productId = row.original.id;
+      const variants = variantsMap[productId] || [];
+
+      return (
+        <Box sx={{ p: 2, background: "#f8fafc", borderRadius: 2 }}>
+          <Typography variant="subtitle2" mb={2} fontWeight={600}>
+            Product Variants
+          </Typography>
+
+          {variants.length === 0 ? (
+            <Typography variant="body2">No variants available</Typography>
+          ) : (
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 2, }}>
+              {variants.map((variant: any) => (
+                <Box
+                  key={variant.id}
+                  sx={{
+                    p: 2,
+                    background: "#ffffff",
+                    borderRadius: 2,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1,
+                  }}
+                >
+                  {/* Top Section */}
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography fontSize={13} fontWeight={600}>
+                      {variant.sku}
+                    </Typography>
+
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Chip
+                        label={variant.isActive ? "Active" : "Inactive"}
+                        size="small"
+                        color={variant.isActive ? "success" : "default"}
+                      />
+                      <Tooltip title="Deactivate Variant">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          onClick={() => deactivateVariant(variant.id, productId)}
+                        >
+                          <BlockIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
+
+                  {/* Size & Color */}
+                  <Box display="flex" gap={2} fontSize={13}>
+                    <Typography variant="body2">
+                      Size: <b>{variant.size}</b>
+                    </Typography>
+
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Box
+                        sx={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          background: variant.color?.toLowerCase(),
+                          border: "1px solid #ddd",
+                        }}
+                      />
+                      <Typography variant="body2">
+                        {variant.color}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Pricing */}
+                  <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1, }}>
+                    <Typography fontSize={13}>
+                      MRP: ₹{variant.mrp ?? "-"}
+                    </Typography>
+                    <Typography fontSize={13}>
+                      Cost: ₹{variant.costPrice ?? "-"}
+                    </Typography>
+
+                    <Typography fontSize={13}>
+                      Selling: ₹{variant.sellingPrice ?? "-"}
+                    </Typography>
+                  </Box>
+
+                  {/* Stock */}
+                  <Box mt={1}>
+                    <Chip
+                      label={`Stock: ${variant.availableStock}`}
+                      size="small"
+                      color={
+                        variant.availableStock < 5 ? "error" : "success"
+                      }
+                    />
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
+      );
     },
-    mantineTableContainerProps: {
-      sx: { maxHeight: "80vh", overflowX: "auto" },
-    },
-    mantineTableBodyRowProps: ({ row }) => ({
-      onDoubleClick: () => {
-        setProduct(row.original);
-        setIsEdit(true);
-        setOpen(true);
-      },
-      style: { cursor: "pointer" },
-    }),
+
   });
 
   useEffect(() => {
-    getData();
-  }, [])
+    fetchProducts();
+  }, []);
 
-  const getData = async () => {
+  const fetchProducts = async () => {
     setLoading(true);
-    try {
-      const res = await getProduct();
+    const res = await getProduct();
+    if (res?.content) {
+      setProducts(res.content);
+    }
+    setLoading(false);
+  };
 
-      if (res) {
-        setProducts(res)
+  const handleToggleVariants = async (row: any) => {
+    const productId = row.original.id;
+
+    if (row.getIsExpanded()) {
+      row.toggleExpanded();
+      return;
+    }
+
+    if (!variantsMap[productId]) {
+      try {
+        const res = await getProductById(productId);
+        setVariantsMap((prev) => ({
+          ...prev,
+          [productId]: res?.variants || [],
+        }));
+      } catch (error) {
+        console.error("Error fetching variants", error);
       }
+    }
+    setExpanded((prev) =>
+      row.getIsExpanded() ? {} : { [row.id]: true }
+    );
+  };
+
+  const activateProduct = async (row: any) => {
+    setLoading(true)
+    try {
+      await activateProductbyId(row.id);
+      alert("Product Activated Successfully");
     } catch (err) {
-      console.error("Error getting Products:", err);
+      console.log("Got Error", err);
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddVariant = async () => {
+    if (!selectedProductId) return;
+    const payload = {
+      size: variantForm.size,
+      color: variantForm.color,
+      mrp: Number(variantForm.mrp),
+      price: Number(variantForm.price),
+      sellingPrice: Number(variantForm.sellingPrice),
+      costPrice: Number(variantForm.costPrice),
+      initialStock: Number(variantForm.initialStock),
+    };
+
+    try {
+      await addVarients(selectedProductId, payload);
+      alert("Variant Added Successfully");
+      setVariantForm({ size: "", color: "", mrp: "", price: "", sellingPrice: "", costPrice: "", initialStock: "" });
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedImages(files);
+  };
+
+  const handleUploadImages = async () => {
+    if (!selectedImageProductId || selectedImages.length === 0) return;
+
+    const formData = new FormData();
+
+    selectedImages.forEach((file) => {
+      formData.append("images", file);
+    });
+
+    try {
+      setLoading(true);
+      await addImages(selectedImageProductId, formData);
+      alert("Images Uploaded Successfully");
+      setImageDialogOpen(false);
+      setSelectedImages([]);
+      fetchProducts();
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  // const handleChange = (field: keyof Product, value: any) => {
-  //   setProduct((prev) => ({ ...prev, [field]: value }));
-  // }
-
-  const handleInputChange = (e: any) => {
-    setProduct({ ...product, [e.target.name]: e.target.value });
-  };
-  const handleSubmit = async () => {
+  const deactivateProduct = async (row: any) => {
+    setLoading(true);
     try {
-      // const payload = {
-      //   ...product,
-      //   images: product.images.length ? product.images : ["string"],
-      // };
-
-      const formData = new FormData();
-
-
-      formData.append("name", product.name);
-      formData.append("brand", product.brand);
-      formData.append("sku", product.sku);
-      formData.append("slug", product.slug);
-      formData.append("description", product.description);
-      formData.append("mrp", String(product.mrp));
-      formData.append("price", String(product.price));
-      formData.append("stock", String(product.stock));
-      formData.append("weight", String(product.weight));
-      formData.append("length", String(product.length));
-      formData.append("width", String(product.width));
-      formData.append("height", String(product.height));
-      formData.append("short_description", product.short_description);
-      formData.append("discount_percent", String(product.discount_percent));
-      formData.append("tax_percent", String(product.tax_percent));
-      formData.append("delivery_days", String(product.delivery_days));
-      formData.append("returnable", String(product.returnable));
-      formData.append("cod_available", String(product.cod_available));
-      product.images.forEach((file) => {
-        formData.append("images", file);
-      });
-
-      console.log([...formData.entries()], "formdata");
-
-      if (isEdit) {
-        await updateProduct(product.id, formData);
-      } else {
-        await addProduct(formData);
-      }
-
-
-      setOpen(false);
-      setProduct(initalProduct);
-      setIsEdit(false);
-      getData();
-    } catch (error) {
-      console.error("Error adding product:", error);
-    }
-  };
-
-  const handleDeactivate = async (id: string) => {
-    const confirm = window.confirm(
-      "Are you sure you want to deactivate this product?"
-    );
-
-    if (!confirm) return;
-
-    try {
-      await deactivateProduct(id);
-      getData(); // refresh table after success
-    } catch (error) {
-      console.error("Error deactivating product:", error);
-    }
-  };
-
-  const handleViewInventory = async (productId: string) => {
-    setInventoryLoading(true);
-    setInventoryOpen(true);
-
-    try {
-      const res = await getInventorybyProductId(productId);
-      if (res) {
-        setInventoryData(res);
-      }
-    } catch (error) {
-      console.error("Error fetching inventory:", error);
-      setInventoryData([]);
+      await deactivateProductbyId(row.id);
+      alert("Product Deactivated Successfully");
+      fetchProducts();
+    } catch (err) {
+      console.log("Got Error", err);
     } finally {
-      setInventoryLoading(false);
+      setLoading(false);
     }
   };
 
-
-  // const [imagePreviews, setImagePreviews] = useState<>([]);
-
-
-  // const handleImageChange = (e: any) => {
-  //   // Convert FileList to array
-  //   const files = Array.from(e.target.files);
-  //   setImagePreviews(files);
-  // };
-  // const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const files = Array.from(e.target.files || []);
-
-  //   files.forEach((file) => {
-  //     if (file.type.startsWith('image/')) {
-  //       setProduct(prev => ({
-  //         ...prev,
-  //         images: [...prev.images, file]   // store file object
-  //       }));
-
-  //       setImagePreviews(prev => [
-  //         ...prev,
-  //         URL.createObjectURL(file)        // preview only
-  //       ]);
-  //     }
-  //   });
-
-  //   e.target.value = '';
-  // }, []);
-
-  // const removeImage = (index: number) => {
-  //   setProduct(prev => ({
-  //     ...prev,
-  //     images: prev.images.filter((_, i) => i !== index)
-  //   }));
-  //   setImagePreviews(prev => prev.filter((_, i) => i !== index));
-  // };
-
+  const deactivateVariant = async (variantId: number, productId: number) => {
+    try {
+      await deactivateVariantById(variantId);
+      alert("Variant Deactivated Successfully");
+      const res = await getProductById(productId);
+      setVariantsMap((prev) => ({
+        ...prev,
+        [productId]: res?.variants || [],
+      }));
+    } catch (err) {
+      console.log("Got Error", err);
+    }
+  };
   return (
     <>
-      <Box>
-        <Box display="flex" justifyContent="flex-end" >
-          <Button variant="contained" sx={{ mt: -3 }} onClick={() => { setProduct(initalProduct); setIsEdit(false); setOpen(true); }}>
-            Add Product
-          </Button>
-        </Box>
-        <Box mt={1} sx={{ height: "75vh" }}>
-          <MantineReactTable table={table} />
-        </Box>
-      </Box>
-
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>{isEdit ? "Update Product" : "Add Product"}</DialogTitle>
-
-        <DialogContent dividers>
-          <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={2}>
-            <TextField
-              label="Name"
-              value={product.name}
-              // onChange={(e) => handleChange("name", e.target.value)}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Brand"
-              value={product.brand}
-              // onChange={(e) => handleChange("brand", e.target.value)}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="SKU"
-              value={product.sku}
-              // onChange={(e) => handleChange("sku", e.target.value)}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Slug"
-              value={product.slug}
-              // onChange={(e) => handleChange("slug", e.target.value)}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Description"
-              value={product.description}
-              // onChange={(e) => handleChange("description", e.target.value)}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Short Description"
-              value={product.short_description}
-              // onChange={(e) => handleChange("short_description", e.target.value)}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="MRP"
-              value={product.mrp}
-              // onChange={(e) => handleChange("mrp", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Price"
-              value={product.price}
-              // onChange={(e) => handleChange("price", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Stock"
-              value={product.stock}
-              // onChange={(e) => handleChange("stock", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Weight"
-              value={product.weight}
-              // onChange={(e) => handleChange("weight", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Length"
-              value={product.length}
-              // onChange={(e) => handleChange("length", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Width"
-              value={product.width}
-              // onChange={(e) => handleChange("width", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Height"
-              value={product.height}
-              // onChange={(e) => handleChange("height", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Discount %"
-              value={product.discount_percent}
-              // onChange={(e) => handleChange("discount_percent", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Tax %"
-              value={product.tax_percent}
-              // onChange={(e) => handleChange("tax_percent", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              label="Delivery Days"
-              value={product.delivery_days}
-              // onChange={(e) => handleChange("delivery_days", Number(e.target.value))}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={product.returnable}
-                  onChange={(e) =>
-                    // handleChange("returnable", e.target.checked)
-                    handleInputChange
-                  }
-                />
-              }
-              label="Returnable"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={product.cod_available}
-                  onChange={(e) =>
-                    // handleChange("cod_available", e.target.checked)
-                    handleInputChange
-                  }
-                />
-              }
-              label="COD Available"
-            />
-
-            {/* <Box gridColumn="span 2">
-              <Button variant="outlined" component="label" fullWidth sx={{ mb: 2 }}>
-                📸 Upload Images (Multiple)
-                <input
-                  type="file"
-                  hidden
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
-              </Button>
-
-              {imagePreviews.length > 0 && (
-                <Box display="flex" gap={2} flexWrap="wrap" sx={{ mb: 2 }}>
-                  {imagePreviews.map((preview, index) => (
-                    <Box key={index} position="relative" width={120}>
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        style={{
-                          width: '100%',
-                          height: 100,
-                          objectFit: 'cover',
-                          borderRadius: 8,
-                          border: '2px solid #e0e0e0'
-                        }}
-                      />
-                      <Button
-                        size="small"
-                        color="error"
-                        sx={{
-                          position: 'absolute',
-                          top: 4,
-                          right: 4,
-                          minWidth: 32,
-                          width: 32,
-                          height: 32,
-                          padding: 0,
-                        }}
-                        onClick={() => removeImage(index)}
-                      >
-                        ✕
-                      </Button>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-
-              <Typography variant="body2" color="text.secondary">
-                {imagePreviews.length} images selected
-              </Typography>
-            </Box> */}
-            {/* <div>
-              <label>Images:</label>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageChange}
-              />
-              {imagePreviews.length > 0 && (
-                <p>Selected {imagePreviews.length} image(s)</p>
-              )}
-            </div> */}
-          </Box>
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit}>
-            Save Product
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Drawer
-        anchor="right"
-        open={inventoryOpen}
-        onClose={() => setInventoryOpen(false)}
-        PaperProps={{ sx: { width: 500, p: 3 } }}
-      >
-        <Box
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5">
+          Product Management
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setOpenAddModal(true)}
           sx={{
-            position: "sticky",
-            top: 0,
-            zIndex: 1,
-            color: "black",
-            px: 3,
-            py: 2,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+            boxShadow: '0 3px 5px 2px rgba(102, 126, 234, .3)',
+            '&:hover': {
+              boxShadow: '0 5px 15px 2px rgba(102, 126, 234, .4)',
+              background: 'linear-gradient(45deg, #5a67d8 30%, #6b46c1 90%)',
+            }
           }}
         >
-          <Typography variant="h6" fontWeight={600}>
-            Inventory Details
-          </Typography>
-
+          Add Product
+        </Button>
+      </Box>
+      <Box sx={{ height: "75vh" }}>
+        <MantineReactTable table={table} />
+      </Box>
+      {/* product */}
+      <Dialog
+        open={openAddModal}
+        onClose={() => setOpenAddModal(false)}
+        fullWidth
+        maxWidth='md'
+      >
+        <DialogContent sx={{ p: 3 }}>
+          <AddProductPage onClose={() => setOpenAddModal(false)} />
+        </DialogContent>
+      </Dialog>
+      {/* varient */}
+      <Dialog
+        open={variantDialogOpen}
+        onClose={() => setVariantDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: -3 }}>
+          <DialogTitle>Add Product Variant</DialogTitle>
           <IconButton
-            onClick={() => setInventoryOpen(false)}
+            onClick={() => setVariantDialogOpen(false)}
             sx={{
-              color: "black",
-              width: 36,
-              height: 36,
-              "&:hover": {
-                background: "rgba(255,255,255,0.2)",
-              },
+              color: 'text.secondary',
+              mr: 4,
+              '&:hover': {
+                color: 'error.main',
+                backgroundColor: 'rgba(244, 67, 54, 0.1)'
+              }
             }}
+            size="small"
           >
-            <CloseRoundedIcon />
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <DialogContent>
+          <Box display="grid" gap={2} mt={1}>
+            <TextField
+              label="Size"
+              value={variantForm.size}
+              onChange={(e) => setVariantForm({ ...variantForm, size: e.target.value })} />
+            <TextField
+              label="Color"
+              value={variantForm.color}
+              onChange={(e) => setVariantForm({ ...variantForm, color: e.target.value })} />
+
+            <TextField
+              label="MRP"
+              type="number"
+              value={variantForm.mrp}
+              onChange={(e) => setVariantForm({ ...variantForm, mrp: e.target.value })} />
+
+            <TextField
+              label="Price"
+              type="number"
+              value={variantForm.price}
+              onChange={(e) => setVariantForm({ ...variantForm, price: e.target.value })} />
+
+            <TextField
+              label="Selling Price"
+              type="number"
+              value={variantForm.sellingPrice}
+              onChange={(e) => setVariantForm({ ...variantForm, sellingPrice: e.target.value })} />
+
+            <TextField
+              label="Cost Price"
+              type="number"
+              value={variantForm.costPrice}
+              onChange={(e) => setVariantForm({ ...variantForm, costPrice: e.target.value })} />
+
+            <TextField
+              label="Initial Stock"
+              type="number"
+              value={variantForm.initialStock}
+              onChange={(e) => setVariantForm({ ...variantForm, initialStock: e.target.value })} />
+
+            <Box display="flex" justifyContent="flex-end" gap={2} mt={2}>
+              <Button
+                variant="outlined"
+                onClick={() => setVariantDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                variant="contained"
+                onClick={handleAddVariant}
+              >
+                Save Variant
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
+      {/* images */}
+      <Dialog
+        open={imageDialogOpen}
+        onClose={() => setImageDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: -3 }}>
+          <DialogTitle>Add Product Images</DialogTitle>
+          <IconButton
+            onClick={() => setImageDialogOpen(false)}
+            sx={{
+              color: 'text.secondary',
+              mr: 4,
+              '&:hover': {
+                color: 'error.main',
+                backgroundColor: 'rgba(244, 67, 54, 0.1)'
+              }
+            }}
+            size="small"
+          >
+            <CloseIcon />
           </IconButton>
         </Box>
 
-        {inventoryLoading ? (
-          <Typography>Loading...</Typography>
-        ) : inventoryData.length === 0 ? (
-          <Typography>No inventory found</Typography>
-        ) : (
-          inventoryData.map((inv) => (
-            <Box
-              key={inv.inventoryId}
-              mb={2}
-              p={2}
-              sx={{
-                borderRadius: 2,
-                border: "1px solid #e0e0e0",
-                background: "#fafafa",
-              }}
-            >
-              <Typography fontWeight={600}>
-                {inv.locationName}
-              </Typography>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
 
-              <Box display="flex" justifyContent="space-between" mt={1}>
-                <Typography variant="body2">
-                  Total Stock: {inv.stock}
-                </Typography>
-                <Typography variant="body2">
-                  Available: {inv.availableStock}
-                </Typography>
-              </Box>
+            <Button variant="outlined" component="label">
+              Select Images
+              <input
+                hidden
+                multiple
+                type="file"
+                onChange={handleImageSelect}
+              />
+            </Button>
 
-              <Box display="flex" justifyContent="space-between" mt={1}>
-                <Typography variant="body2">
-                  Reserved: {inv.reservedStock}
-                </Typography>
-                <Typography variant="body2">
-                  Reorder Level: {inv.reorderLevel}
-                </Typography>
-              </Box>
-
-              <Box mt={1}>
-                <Typography
-                  variant="body2"
+            {/* Preview */}
+            <Box display="flex" gap={2} flexWrap="wrap">
+              {selectedImages.map((file, index) => (
+                <Box
+                  key={index}
+                  component="img"
+                  src={URL.createObjectURL(file)}
                   sx={{
-                    color:
-                      inv.stockStatus === "OUT_OF_STOCK"
-                        ? "error.main"
-                        : inv.stockStatus === "LOW_STOCK"
-                          ? "warning.main"
-                          : "success.main",
-                    fontWeight: 600,
+                    width: 80,
+                    height: 80,
+                    objectFit: "cover",
+                    borderRadius: 2,
+                    border: "1px solid #e2e8f0",
                   }}
-                >
-                  {inv.stockStatus}
-                </Typography>
-              </Box>
-
-              <Typography variant="caption" color="text.secondary">
-                Last Updated:{" "}
-                {new Date(inv.lastUpdated).toLocaleString()}
-              </Typography>
+                />
+              ))}
             </Box>
-          ))
-        )}
-      </Drawer>
 
+            <Box display="flex" justifyContent="flex-end" gap={2} mt={2}>
+              <Button
+                variant="outlined"
+                onClick={() => setImageDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                variant="contained"
+                onClick={handleUploadImages}
+                disabled={loading}
+              >
+                {loading ? "Uploading..." : "Upload Images"}
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
     </>
-  )
+  );
 }

@@ -10,15 +10,23 @@ async function request<T>(
 ): Promise<T> {
   const accessToken = localStorage.getItem("accessToken");
 
+  const isFormData = body instanceof FormData;
+
+  const headers: HeadersInit = {
+    ...(accessToken && {
+      Authorization: `Bearer ${accessToken}`,
+    }),
+  };
+
+  // Only set Content-Type for non-FormData requests
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const response = await fetch(url, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken && {
-        Authorization: `Bearer ${accessToken}`,
-      }),
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
   // 🔁 ACCESS TOKEN EXPIRED
@@ -41,9 +49,20 @@ async function request<T>(
       // 🔁 retry original request
       return request<T>(url, method, body, false);
     } catch (err) {
-      // ❌ refresh bhi fail → logout
-      localStorage.clear();
-      window.location.href = "/login";
+      // ❌ refresh bhi fail → logout only if on client side
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        document.cookie = "accessToken=; Max-Age=0; path=/";
+        document.cookie = "refreshToken=; Max-Age=0; path=/";
+        // Emit storage event to notify other components
+        window.dispatchEvent(
+          new StorageEvent("storage", {
+            key: "refreshToken",
+            newValue: null,
+          })
+        );
+      }
       throw err;
     }
   }
