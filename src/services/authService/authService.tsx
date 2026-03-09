@@ -1,5 +1,5 @@
 import { URL_UTILITY } from "../../utls/urlUtls";
-import { postApi, getApi, putApi, deleteApi } from "../../utls/http";
+import { postApi, getApi, putApi, deleteApi, patchApi } from "../../utls/http";
 import axios from "axios";
 
 export async function userRegisterApi(payload: any) {
@@ -215,5 +215,25 @@ export async function deactivateProductbyId(id: string) {
 }
 export async function deactivateVariantById(id: any) {
   const url = URL_UTILITY.adminUrl + `products/variants/${id}`;
+  return await deleteApi(url);
+}
+export async function getWarehouses() {
+  const url = URL_UTILITY.adminUrl + `warehouses`;
+  return await getApi(url);
+}
+export async function addWarehouse(payload: any) {
+  const url = URL_UTILITY.adminUrl + `warehouses`;
+  return await postApi(url, payload);
+}
+export async function updateWarehouse(id: any, payload: any) {
+  const url = URL_UTILITY.adminUrl + `warehouses/${id}`;
+  return await putApi(url, payload);
+}
+export async function deactivateWarehouse(id: any) {
+  const url = URL_UTILITY.adminUrl + `warehouses/${id}/deactivate`;
+  return await patchApi(url);
+}
+export async function deleteWarehouse(id: any) {
+  const url = URL_UTILITY.adminUrl + `warehouses/${id}`;
   return await deleteApi(url);
 }

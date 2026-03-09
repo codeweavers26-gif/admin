@@ -13,74 +13,7 @@ import ProductPage from "./ProductPage";
 import InventoryPage from "./InventoryPage";
 import ReturnPage from "./ReturnPage";
 import CartPage from "./CartPage";
-
-
-interface Product {
-  name: string;
-  brand: string;
-  sku: string;
-  slug: string;
-  description: string;
-  mrp: string;
-  price: string;
-  stock: string;
-  weight: string;
-  length: string;
-  width: string;
-  height: string;
-  returnable: boolean;
-  images: string[];
-  short_description: string;
-  discount_percent: string;
-  tax_percent: string;
-  cod_available: boolean;
-  delivery_days: string;
-}
-
-interface RevenueData {
-  todayRevenue: number;
-  thisMonthRevenue: number;
-  taxCollectedMonth: number;
-  codOrders: number;
-  prepaidOrders: number;
-}
-
-interface OrdersSummary {
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
-}
-
-interface OrderStatusSummary {
-  pending: number;
-  shipped: number;
-  cancelled: number;
-  delivered: number;
-}
-
-interface CustomerSummary {
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
-}
-
-interface DashboardStatsData {
-  total_cart_value: number;
-  total_inventory_left: number;
-  total_items_sold: number;
-  total_orders: number;
-  total_sales: number;
-  total_users: number;
-  users_with_cart: number;
-}
-
-interface DashboardStatsProps {
-  revenueData: RevenueData;
-  orders: OrdersSummary;
-  dashboardStats: DashboardStatsData;
-  customer: CustomerSummary;
-  orderStatus: OrderStatusSummary;
-}
+import WarehousePage from "./WarehousePage";
 
 
 interface DashboardLayoutProps {
@@ -91,7 +24,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'products' | 'orders' | 'locations' | 'catalog' | 'inventory' | 'return' | 'cart'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'products' | 'orders' | 'locations' | 'catalog' | 'inventory' | 'warehouse' | 'return' | 'cart'>('dashboard');
 
 
   const handleLogout = async () => {
@@ -119,6 +52,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const showInventory = () => { setActiveView('inventory'); };
   const showReturn = () => { setActiveView('return'); };
   const showCart = () => { setActiveView('cart'); };
+  const showWarehouse = () => { setActiveView('warehouse'); };
 
   return (
     <div style={appContainer}>
@@ -208,6 +142,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 onClick={showCart}
                 isCollapsed={isCollapsed}
               />
+              <SidebarItem
+                label="Warehouse"
+                icon="🏭"
+                isActive={activeView === 'warehouse'}
+                onClick={showWarehouse}
+                isCollapsed={isCollapsed}
+              />
             </nav>
           </div>
           <div style={logoutContainer}>
@@ -239,6 +180,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {activeView === 'return' && <ReturnPage />}
 
           {activeView === 'cart' && <CartPage />}
+
+          {activeView === 'warehouse' && <WarehousePage />}
         </main>
       </div>
     </div>
@@ -312,6 +255,7 @@ const navStyle: React.CSSProperties = {
   flex: 1,
   padding: "12px 0",
   overflowY: "auto",
+  maxHeight: "calc(100vh - 160px)"
 };
 
 const sidebarItem: React.CSSProperties = {
