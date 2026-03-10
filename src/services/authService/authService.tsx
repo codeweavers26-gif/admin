@@ -237,3 +237,11 @@ export async function deleteWarehouse(id: any) {
   const url = URL_UTILITY.adminUrl + `warehouses/${id}`;
   return await deleteApi(url);
 }
+export async function getCatalogSections() {
+  const url = URL_UTILITY.adminUrl + `catalog/sections`;
+  return await getApi(url);
+}
+export async function getCatalogCategories(sec_id: any) {
+  const url = URL_UTILITY.adminUrl + `catalog/categories?sectionId=${sec_id}`;
+  return await getApi(url);
+}
