@@ -14,6 +14,7 @@ import InventoryPage from "./InventoryPage";
 import ReturnPage from "./ReturnPage";
 import CartPage from "./CartPage";
 import WarehousePage from "./WarehousePage";
+import CouponPage from "./CouponPage";
 
 
 interface DashboardLayoutProps {
@@ -24,7 +25,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'products' | 'orders' | 'locations' | 'catalog' | 'inventory' | 'warehouse' | 'return' | 'cart'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'products' | 'coupon' | 'orders' | 'locations' | 'catalog' | 'inventory' | 'warehouse' | 'return' | 'cart'>('dashboard');
 
 
   const handleLogout = async () => {
@@ -49,10 +50,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const showLocations = () => { setActiveView('locations'); };
   const showUsers = () => { setActiveView('users'); };
   const showCatalog = () => { setActiveView('catalog'); };
-  const showInventory = () => { setActiveView('inventory'); };
+  // const showInventory = () => { setActiveView('inventory'); };
   const showReturn = () => { setActiveView('return'); };
   const showCart = () => { setActiveView('cart'); };
   const showWarehouse = () => { setActiveView('warehouse'); };
+  const showCoupon = () => { setActiveView('coupon'); };
 
   return (
     <div style={appContainer}>
@@ -101,6 +103,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 isCollapsed={isCollapsed}
               />
               <SidebarItem
+                label="Coupons"
+                icon="🎫"
+                isActive={activeView === 'coupon'}
+                onClick={showCoupon}
+                isCollapsed={isCollapsed}
+              />
+              <SidebarItem
                 label="Orders"
                 icon="📦"
                 isActive={activeView === 'orders'}
@@ -121,13 +130,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 onClick={showCatalog}
                 isCollapsed={isCollapsed}
               />
-              <SidebarItem
+              {/* <SidebarItem
                 label="Inventory"
                 icon="📋"
                 isActive={activeView === 'inventory'}
                 onClick={showInventory}
                 isCollapsed={isCollapsed}
-              />
+              /> */}
               <SidebarItem
                 label="Return"
                 icon="↩️"
@@ -175,13 +184,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {activeView === 'catalog' && <CatalogMainPage />}
 
-          {activeView === 'inventory' && <InventoryPage />}
+          {/* {activeView === 'inventory' && <InventoryPage />} */}
 
           {activeView === 'return' && <ReturnPage />}
 
           {activeView === 'cart' && <CartPage />}
 
           {activeView === 'warehouse' && <WarehousePage />}
+
+          {activeView === 'coupon' && <CouponPage />}
+
         </main>
       </div>
     </div>

@@ -93,13 +93,8 @@ export const buildQueryPayload = (
 export function toQueryParams(params: Record<string, any>): string {
 
   const query = Object.entries(params)
-    .map(
-      ([key, value]) => {
-        if (value || value == 0) {
-          return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
-        }
-      }
-    )
+    .filter(([_, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
   return query ? `?${query}` : "";
 }

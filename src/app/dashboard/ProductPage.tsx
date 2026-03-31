@@ -11,6 +11,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import BlockIcon from "@mui/icons-material/Block";
+import { toQueryParams } from "@/src/utls/queryUtils";
 
 interface Category {
   id: number;
@@ -57,6 +58,8 @@ interface Product {
 export default function ProductPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  const [totalElements, setTotalElements] = useState(0);
 
   const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
   const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -71,6 +74,10 @@ export default function ProductPage() {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedImageProductId, setSelectedImageProductId] = useState<number | null>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+
+  useEffect(() => {
+    fetchProducts(pagination.pageIndex, pagination.pageSize);
+  }, [pagination]);
 
   const columns = useMemo<MRT_ColumnDef<Product>[]>(() => [
     {
@@ -203,8 +210,11 @@ export default function ProductPage() {
     enableStickyHeader: true,
     initialState: { density: "xs" },
     enableExpanding: true,
-    state: { expanded },
+    state: { expanded, pagination, isLoading: loading },
     onExpandedChange: setExpanded,
+    manualPagination: true,
+    rowCount: totalElements,
+    onPaginationChange: setPagination,
     renderDetailPanel: ({ row }) => {
       const productId = row.original.id;
       const variants = variantsMap[productId] || [];
@@ -313,17 +323,23 @@ export default function ProductPage() {
 
   });
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = async (pageIndex = 0, pageSize = 10) => {
     setLoading(true);
-    const res = await getProduct();
-    if (res?.content) {
-      setProducts(res.content);
+    try {
+      const payload = {
+        page: pageIndex,
+        size: pageSize,
+      };
+      const res = await getProduct(toQueryParams(payload));
+      if (res?.content) {
+        setProducts(res.content);
+        setTotalElements(res.totalElements);
+      }
+    } catch (err) {
+      console.error("Error fetching products", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleToggleVariants = async (row: any) => {
@@ -444,21 +460,37 @@ export default function ProductPage() {
         <Typography variant="h5">
           Product Management
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenAddModal(true)}
-          sx={{
-            background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-            boxShadow: '0 3px 5px 2px rgba(102, 126, 234, .3)',
-            '&:hover': {
-              boxShadow: '0 5px 15px 2px rgba(102, 126, 234, .4)',
-              background: 'linear-gradient(45deg, #5a67d8 30%, #6b46c1 90%)',
-            }
-          }}
-        >
-          Add Product
-        </Button>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenAddModal(true)}
+            sx={{
+              background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+              boxShadow: '0 3px 5px 2px rgba(102, 126, 234, .3)',
+              '&:hover': {
+                boxShadow: '0 5px 15px 2px rgba(102, 126, 234, .4)',
+                background: 'linear-gradient(45deg, #5a67d8 30%, #6b46c1 90%)',
+              }
+            }}
+          >
+            Add Product
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => fetchProducts()}
+            sx={{
+              background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+              boxShadow: '0 3px 5px 2px rgba(102, 126, 234, .3)',
+              '&:hover': {
+                boxShadow: '0 5px 15px 2px rgba(102, 126, 234, .4)',
+                background: 'linear-gradient(45deg, #5a67d8 30%, #6b46c1 90%)',
+              }
+            }}
+          >
+            Search
+          </Button>
+        </Box>
       </Box>
       <Box sx={{ height: "75vh" }}>
         <MantineReactTable table={table} />

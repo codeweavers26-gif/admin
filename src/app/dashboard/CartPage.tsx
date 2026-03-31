@@ -43,6 +43,13 @@ export default function CartPage() {
     }
   };
 
+  const isOldCart = (cartAge: string) => {
+    const [value, unit] = cartAge.split(" ");
+    const num = parseInt(value);
+    if (unit.startsWith("day")) return num >= 3;
+    return false;
+  };
+
   return (
     <Box sx={{ p: 4 }}>
       <Typography variant="h5" mb={3}>
@@ -77,7 +84,7 @@ export default function CartPage() {
 
               <Chip
                 label={`Cart Age: ${cart.cartAge}`}
-                color="secondary"
+                color={isOldCart(cart.cartAge) ? "error" : "secondary"}
                 size="small"
               />
             </Box>

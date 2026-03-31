@@ -1,6 +1,6 @@
 import { Box, Button, Stack, TextField } from "@mui/material";
 import { MantineReactTable, MRT_ColumnDef, useMantineReactTable } from "mantine-react-table";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { getCartbyUserId, getOrdersByUserId, getReturnsByUserId, getUsers } from "../../services/authService/authService";
 import { Drawer, Loader, Text } from "@mantine/core";
 import { IconButton, Tooltip } from "@mui/material";
@@ -31,6 +31,8 @@ export default function UserPage() {
   const [users, setUsers] = useState<UserType[]>([]);
   const [basicFilters, setBasicFilters] = useState<BasicFilters>(initialFiltersValue);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  const [totalElements, setTotalElements] = useState(0);
 
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
@@ -71,10 +73,10 @@ export default function UserPage() {
   const table = useMantineReactTable({
     columns,
     data: users,
-    rowCount: users.length,
+    rowCount: totalElements,
     manualPagination: true,
-    // onPaginationChange: setPagination,
-    // state: { pagination, isLoading: loading },
+    onPaginationChange: setPagination,
+    state: { pagination, isLoading: loading },
     enableStickyHeader: true,
     enableColumnOrdering: true,
     enableColumnResizing: true,
@@ -88,26 +90,42 @@ export default function UserPage() {
     },
   });
 
-  const fetchUserData = async () => {
+  useEffect(() => {
+    fetchUserData(pagination.pageIndex, pagination.pageSize);
+  }, [pagination.pageIndex, pagination.pageSize]);
+
+  const fetchUserData = async (pageIndex = pagination.pageIndex, pageSize = pagination.pageSize) => {
     setLoading(true);
     try {
       const payload = {
-        search: basicFilters.search,
-        fromDate: basicFilters.fromDate,
-        toDate: basicFilters.toDate,
-      }
-      // const queryParam = toQueryParams(payload)
-      const res = await getUsers();
-
+        page: pageIndex,
+        size: pageSize,
+        ...(basicFilters.search && { search: basicFilters.search }),
+        ...(basicFilters.fromDate && { fromDate: basicFilters.fromDate }),
+        ...(basicFilters.toDate && { toDate: basicFilters.toDate }),
+      };
+      const res = await getUsers(toQueryParams(payload));
       if (res) {
-        setUsers(res.content)
+        setUsers(res.content);
+        setTotalElements(res.totalElements);
       }
     } catch {
       console.error("Error getting Users");
     } finally {
       setLoading(false);
     }
-  }
+  };
+
+  const handleSearch = () => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+    fetchUserData(0, pagination.pageSize);
+  };
+
+  const handleReset = () => {
+    setBasicFilters(initialFiltersValue);
+    setPagination({ pageIndex: 0, pageSize: 10 });
+    fetchUserData(0, 10);
+  };
 
   const handleViewOrders = async (user: UserType) => {
     setSelectedUser(user);
@@ -118,15 +136,14 @@ export default function UserPage() {
     setCartLoading(true);
 
     try {
-      const [ordersRes, cartRes] = await Promise.all([
+      const [ordersRes, returnsRes, cartRes] = await Promise.all([
         getOrdersByUserId(user.id),
-        // getReturnsByUserId(user.id),
+        getReturnsByUserId(user.id),
         getCartbyUserId(user.id),
       ]);
 
       if (ordersRes) setOrders(ordersRes.content);
-      // if (returnsRes) setReturns(returnsRes.content);
-
+      if (returnsRes) setReturns(returnsRes.content);
       if (cartRes) setCart(cartRes);
     } catch (err) {
       console.error("Error fetching orders/returns");
@@ -168,8 +185,11 @@ export default function UserPage() {
             setBasicFilters({ ...basicFilters, toDate: e.target.value })
           }
         />
-        <Button variant="contained" className="app-btn-sm" onClick={fetchUserData}>
+        <Button variant="contained" className="app-btn-sm" onClick={handleSearch}>
           Search
+        </Button>
+        <Button variant="outlined" className="app-btn-sm" onClick={handleReset}>
+          Reset
         </Button>
       </Stack>
       <Box mt={1} sx={{ height: "75vh" }}>

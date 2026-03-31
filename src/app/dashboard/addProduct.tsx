@@ -55,7 +55,7 @@ const initialState: ProductForm = {
   mrp: "",
   price: "",
   stock: "",
-  categoryId: "27",
+  categoryId: "1",
   short_description: "",
   discount_percent: "",
   tax_percent: "",

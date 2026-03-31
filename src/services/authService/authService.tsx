@@ -53,8 +53,8 @@ export async function deactivateProduct(id: string) {
   const url = URL_UTILITY.adminUrl + `products/${id}`;
   return await deleteApi(url);
 }
-export async function getProduct() {
-  const url = URL_UTILITY.adminUrl + "products";
+export async function getProduct(reqParams: any) {
+  const url = URL_UTILITY.adminUrl + "products" + reqParams;
   return await getApi(url);
 }
 export async function getProductById(id: number) {
@@ -81,8 +81,8 @@ export async function getCustomerSummary() {
   const url = URL_UTILITY.adminUrl + "new-customers";
   return await getApi(url);
 }
-export async function getOrders(page: string, limit: string) {
-  const url = URL_UTILITY.adminUrl + `orders?page=${page}&size=${limit}`;
+export async function getOrders(req: any) {
+  const url = URL_UTILITY.adminUrl + `orders?${req}`;
   return await getApi(url);
 }
 export async function getLocations() {
@@ -101,8 +101,8 @@ export async function deactivateLocation(id: string) {
   const url = URL_UTILITY.adminUrl + `locations/${id}`;
   return await deleteApi(url);
 }
-export async function getUsers() {
-  const url = URL_UTILITY.adminUrl + `users`;
+export async function getUsers(reqParams: any) {
+  const url = URL_UTILITY.adminUrl + `users` + reqParams;
   return await getApi(url);
 }
 export async function cancelOrder(id: any) {
@@ -182,7 +182,7 @@ export async function getInventorybyLocId(loc_id: string) {
   return await getApi(url);
 }
 export async function getAllReturns() {
-  const url = URL_UTILITY.adminUrl + `returns?page=0&size=1000`;
+  const url = URL_UTILITY.adminUrl + `returns/returns?page=0&size=1000`;
   return await getApi(url);
 }
 export async function updateReturnStatus(id: any, payload: any) {
@@ -243,5 +243,41 @@ export async function getCatalogSections() {
 }
 export async function getCatalogCategories(sec_id: any) {
   const url = URL_UTILITY.adminUrl + `catalog/categories?sectionId=${sec_id}`;
+  return await getApi(url);
+}
+export async function getPendingReturns() {
+  const url = URL_UTILITY.adminUrl + `returns/returns/pending`;
+  return await getApi(url);
+}
+export async function approveReturn(id: any, payload: object) {
+  const url = URL_UTILITY.adminUrl + `returns/returns/${id}/approve`;
+  return await postApi(url, payload);
+}
+export async function rejectReturn(id: any, payload: object) {
+  const url = URL_UTILITY.adminUrl + `returns/returns/${id}/approve`;
+  return await postApi(url, payload);
+}
+export async function getCoupons(reqParams: any) {
+  const url = URL_UTILITY.adminUrl + `coupons` + reqParams;
+  return await getApi(url);
+}
+export async function createCoupon(payload: object) {
+  const url = URL_UTILITY.adminUrl + `api`;
+  return await postApi(url, payload);
+}
+export async function bulkCreateCoupon(payload: object) {
+  const url = URL_UTILITY.adminUrl + `coupons/bulk`;
+  return await postApi(url, payload);
+}
+export async function deleteCoupon(id: any) {
+  const url = URL_UTILITY.adminUrl + `api/${id}`;
+  return await deleteApi(url);
+}
+export async function updateCoupon(id: any, payload: object) {
+  const url = URL_UTILITY.adminUrl + `api/${id}`;
+  return await putApi(url, payload);
+}
+export async function getCouponUsage(id: any, reqParams: any) {
+  const url = URL_UTILITY.adminUrl + `api/${id}/usage` + reqParams;
   return await getApi(url);
 }

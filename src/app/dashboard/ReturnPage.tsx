@@ -1,214 +1,342 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, TextField, Chip, Stack, Typography, } from "@mui/material";
-import { MantineReactTable, MRT_ColumnDef, useMantineReactTable, } from "mantine-react-table";
-import { getAllReturns, updateReturnStatus } from "@/src/services/authService/authService";
+import { useEffect, useState } from "react";
+import { Box, Typography, Chip, Tabs, Tab, Tooltip, IconButton, Dialog, DialogContent, DialogTitle, Checkbox, FormControlLabel, Button, TextField } from "@mui/material";
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
+import { MantineReactTable, MRT_ColumnDef, useMantineReactTable } from "mantine-react-table";
+import { useMemo } from "react";
+import { approveReturn, getAllReturns, getPendingReturns, rejectReturn } from "@/src/services/authService/authService";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
+import CloseIcon from "@mui/icons-material/Close";
 
 interface ReturnType {
-  orderId: number;
-  productName: string;
-  quantity: number;
-  reason: string;
-  refundAmount: number;
-  requestedAt: string;
-  returnId: number;
+  id: number;
+  returnNumber: string;
   status: string;
-  userEmail: string;
+  reason: string;
+  reasonDescription: string;
+  quantity: number;
+  refundAmount: number;
+  restockingFee: number;
+  createdAt: string;
+  updatedAt: string | null;
+  totalRefundAmount: number;
   userId: number;
+  orderId: number;
+  orderItemId: number;
+  productName: string;
+  itemPrice: number;
+  refundStatus: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  completedAt: string | null;
 }
 
-export default function ReturnPage() {
-  const [returns, setReturns] = useState<ReturnType[]>([]);
-  const [loading, setLoading] = useState(false);
+const statusColors: Record<string, "green" | "orange" | "red" | "blue" | "gray"> = {
+  APPROVED: "green",
+  PENDING: "orange",
+  REJECTED: "red",
+  COMPLETED: "blue",
+};
 
-  const [selectedReturn, setSelectedReturn] = useState<ReturnType | null>(null);
-  const [openStatusModal, setOpenStatusModal] = useState(false);
-  const [newStatus, setNewStatus] = useState("");
-  const [refundAmount, setRefundAmount] = useState<number>(0);
-  const [adminComment, setAdminComment] = useState("");
+export default function ReturnPage() {
+  const [activeTab, setActiveTab] = useState(0);
+  const [allReturns, setAllReturns] = useState<ReturnType[]>([]);
+  const [pendingReturns, setPendingReturns] = useState<ReturnType[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+  const [pendingLoading, setPendingLoading] = useState(false);
+
+  const [approveDialog, setApproveDialog] = useState(false);
+  const [rejectDialog, setRejectDialog] = useState(false);
+  const [selectedReturnId, setSelectedReturnId] = useState<number | null>(null);
+
+  const [approveForm, setApproveForm] = useState({ adminNotes: "", restockingFee: 0, notifyCustomer: true });
+  const [rejectForm, setRejectForm] = useState({ rejectionReason: "", adminNotes: "", notifyCustomer: true });
+
+  useEffect(() => {
+    fetchAllReturns();
+    fetchPendingReturns();
+  }, []);
+
+  const fetchAllReturns = async () => {
+    setAllLoading(true);
+    try {
+      const res = await getAllReturns();
+      if (res?.content) setAllReturns(res.content);
+    } catch (err) {
+      console.error("Error fetching all returns", err);
+    } finally {
+      setAllLoading(false);
+    }
+  };
+
+  const fetchPendingReturns = async () => {
+    setPendingLoading(true);
+    try {
+      const res = await getPendingReturns();
+      if (res?.content) setPendingReturns(res.content);
+    } catch (err) {
+      console.error("Error fetching pending returns", err);
+    } finally {
+      setPendingLoading(false);
+    }
+  };
 
   const columns = useMemo<MRT_ColumnDef<ReturnType>[]>(() => [
-    { accessorKey: "returnId", header: "Return ID" },
-    { accessorKey: "orderId", header: "Order ID" },
-    { accessorKey: "productName", header: "Product" },
-    { accessorKey: "userEmail", header: "User Email" },
-    { accessorKey: "quantity", header: "Qty" },
-    { accessorKey: "reason", header: "Reason" },
     {
-      accessorKey: "refundAmount",
-      header: "Refund",
-      Cell: ({ row }) => `₹${row.original.refundAmount}`,
+      id: "actions",
+      header: "Actions",
+      size: 160,
+      Cell: ({ row }) => (
+        <Box display="flex" gap={1}>
+          <Tooltip title="Approve">
+            <span>
+              <IconButton
+                size="small"
+                color="success"
+                // disabled={row.original.status !== "PENDING"}
+                onClick={() => { setSelectedReturnId(row.original.id); setApproveDialog(true); }}
+              >
+                <CheckCircleIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Reject">
+            <span>
+              <IconButton
+                size="small"
+                color="error"
+                // disabled={row.original.status !== "PENDING"}
+                onClick={() => { setSelectedReturnId(row.original.id); setRejectDialog(true); }}
+              >
+                <CancelIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+      ),
     },
+    { accessorKey: "returnNumber", header: "Return Number", size: 160 },
+    { accessorKey: "productName", header: "Product", size: 200 },
     {
-      accessorKey: "requestedAt",
-      header: "Requested At",
-      Cell: ({ row }) =>
-        new Date(row.original.requestedAt).toLocaleString(),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: "status", header: "Status", size: 120,
       Cell: ({ row }) => (
         <Chip
           label={row.original.status}
-          color={
-            row.original.status === "APPROVED"
-              ? "success"
-              : row.original.status === "REJECTED"
-                ? "error"
-                : row.original.status === "PENDING"
-                  ? "warning"
-                  : "default"
-          }
           size="small"
+          sx={{
+            background: statusColors[row.original.status] ?? "gray",
+            color: "#fff",
+            fontWeight: 600,
+            fontSize: 11,
+          }}
         />
       ),
     },
+    { accessorKey: "reason", header: "Reason", size: 140 },
+    { accessorKey: "reasonDescription", header: "Description", size: 180 },
+    { accessorKey: "quantity", header: "Qty", size: 120 },
     {
-      id: "actions",
-      header: "",
-      Cell: ({ row }) => (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => handleOpenStatusModal(row.original)}
-        >
-          Update Status
-        </Button>
-      ),
+      accessorKey: "itemPrice", header: "Item Price", size: 110,
+      Cell: ({ row }) => `₹${row.original.itemPrice}`,
+    },
+    {
+      accessorKey: "refundAmount", header: "Refund Amount", size: 130,
+      Cell: ({ row }) => `₹${row.original.refundAmount}`,
+    },
+    {
+      accessorKey: "restockingFee", header: "Restocking Fee", size: 130,
+      Cell: ({ row }) => `₹${row.original.restockingFee}`,
+    },
+    {
+      accessorKey: "totalRefundAmount", header: "Total Refund", size: 120,
+      Cell: ({ row }) => `₹${row.original.totalRefundAmount}`,
+    },
+    {
+      accessorKey: "refundStatus", header: "Refund Status", size: 130,
+      Cell: ({ row }) => row.original.refundStatus ?? "-",
+    },
+    { accessorKey: "orderId", header: "Order ID", size: 100 },
+    { accessorKey: "userId", header: "User ID", size: 90 },
+    {
+      accessorKey: "createdAt", header: "Created At", size: 160,
+      Cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+    },
+    {
+      accessorKey: "approvedAt", header: "Approved At", size: 160,
+      Cell: ({ row }) => row.original.approvedAt ? new Date(row.original.approvedAt).toLocaleString() : "-",
+    },
+    {
+      accessorKey: "rejectedAt", header: "Rejected At", size: 160,
+      Cell: ({ row }) => row.original.rejectedAt ? new Date(row.original.rejectedAt).toLocaleString() : "-",
+    },
+    {
+      accessorKey: "completedAt", header: "Completed At", size: 160,
+      Cell: ({ row }) => row.original.completedAt ? new Date(row.original.completedAt).toLocaleString() : "-",
     },
   ], []);
 
-  const table = useMantineReactTable({
+  const allTable = useMantineReactTable({
     columns,
-    data: returns,
-    manualPagination: true,
+    data: allReturns,
     enableStickyHeader: true,
-    enableColumnResizing: true,
     enableColumnOrdering: true,
+    enableColumnResizing: true,
+    enableColumnPinning: true,
+    enableRowVirtualization: true,
     initialState: { density: "xs" },
+    state: { isLoading: allLoading },
+    mantineTableContainerProps: { sx: { maxHeight: "65vh" } },
   });
 
-  useEffect(() => {
-    fetchReturns();
-  }, []);
+  const pendingTable = useMantineReactTable({
+    columns,
+    data: pendingReturns,
+    enableStickyHeader: true,
+    enableColumnOrdering: true,
+    enableColumnResizing: true,
+    enableColumnPinning: true,
+    enableRowVirtualization: true,
+    initialState: { density: "xs" },
+    state: { isLoading: pendingLoading },
+    mantineTableContainerProps: { sx: { maxHeight: "65vh" } },
+  });
 
-  const fetchReturns = async () => {
-    setLoading(true);
+  const handleApprove = async () => {
+    if (!selectedReturnId) return;
     try {
-      const res = await getAllReturns();
-      if (res?.content) {
-        setReturns(res.content);
-      }
-    } catch (error) {
-      console.error("Error fetching returns", error);
-    } finally {
-      setLoading(false);
+      await approveReturn(selectedReturnId, approveForm);
+      setApproveDialog(false);
+      setApproveForm({ adminNotes: "", restockingFee: 0, notifyCustomer: true });
+      fetchAllReturns();
+      fetchPendingReturns();
+    } catch (err) {
+      console.error("Error approving return", err);
     }
   };
 
-  const handleOpenStatusModal = (ret: ReturnType) => {
-    setSelectedReturn(ret);
-    setNewStatus(ret.status);
-    setRefundAmount(ret.refundAmount);
-    setAdminComment("");
-    setOpenStatusModal(true);
-  };
-
-  const handleUpdateStatus = async () => {
-    if (!selectedReturn) return;
-
+  const handleReject = async () => {
+    if (!selectedReturnId) return;
     try {
-      await updateReturnStatus(selectedReturn.returnId, {
-        status: newStatus,
-        refundAmount: refundAmount,
-        adminComment: adminComment,
-      });
-
-      setOpenStatusModal(false);
-      fetchReturns();
-    } catch (error) {
-      console.error("Error updating return:", error);
+      await rejectReturn(selectedReturnId, rejectForm);
+      setRejectDialog(false);
+      setRejectForm({ rejectionReason: "", adminNotes: "", notifyCustomer: true });
+      fetchAllReturns();
+      fetchPendingReturns();
+    } catch (err) {
+      console.error("Error rejecting return", err);
     }
   };
-
 
   return (
     <Box>
-      <Typography variant="h5" mb={2}>
-        Return Management
-      </Typography>
-
-      <Box sx={{ height: "75vh" }}>
-        <MantineReactTable table={table} />
+      {/* Header */}
+      <Box display="flex" alignItems="center" gap={1} mb={2}>
+        <AssignmentReturnIcon color="primary" />
+        <Typography variant="h5" fontWeight={600}>Returns Management</Typography>
       </Box>
 
-      {/* Update Status Dialog */}
-      <Dialog
-        open={openStatusModal}
-        onClose={() => setOpenStatusModal(false)}
-        maxWidth="sm"
-        fullWidth
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onChange={(_, val) => setActiveTab(val)}
+        sx={{ mb: 2, borderBottom: "1px solid #e2e8f0" }}
       >
-        <DialogTitle>Update Return</DialogTitle>
+        <Tab label={`All Returns (${allReturns.length})`} />
+        <Tab label={`Pending Returns (${pendingReturns.length})`} />
+      </Tabs>
 
+      {/* All Returns */}
+      {activeTab === 0 && (
+        <Box sx={{ height: "75vh" }}>
+          <MantineReactTable table={allTable} />
+        </Box>
+      )}
+
+      {/* Pending Returns */}
+      {activeTab === 1 && (
+        <Box sx={{ height: "75vh" }}>
+          <MantineReactTable table={pendingTable} />
+        </Box>
+      )}
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialog} onClose={() => setApproveDialog(false)} maxWidth="sm" fullWidth>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={-3}>
+          <DialogTitle>Approve Return</DialogTitle>
+          <IconButton onClick={() => setApproveDialog(false)} sx={{ mr: 4, "&:hover": { color: "error.main" } }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
         <DialogContent>
-          <Stack spacing={2} mt={1}>
-
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
             <TextField
-              label="Return ID"
-              value={selectedReturn?.returnId || ""}
-              disabled
-              fullWidth
-              size="small"
+              label="Admin Notes"
+              multiline rows={3} fullWidth size="small"
+              value={approveForm.adminNotes}
+              onChange={(e) => setApproveForm({ ...approveForm, adminNotes: e.target.value })}
             />
-
             <TextField
-              select
-              label="Status"
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-              fullWidth
-              size="small"
-            >
-              <MenuItem value="PENDING">Pending</MenuItem>
-              <MenuItem value="APPROVED">Approved</MenuItem>
-              <MenuItem value="REJECTED">Rejected</MenuItem>
-              <MenuItem value="REFUNDED">Refunded</MenuItem>
-            </TextField>
-
-            <TextField
-              label="Refund Amount"
-              type="text"
-              value={refundAmount}
-              onChange={(e) => setRefundAmount(Number(e.target.value))}
-              fullWidth
-              size="small"
+              label="Restocking Fee"
+              type="number" fullWidth size="small"
+              value={approveForm.restockingFee}
+              onChange={(e) => setApproveForm({ ...approveForm, restockingFee: Number(e.target.value) })}
             />
-
-            <TextField
-              label="Admin Comment"
-              value={adminComment}
-              onChange={(e) => setAdminComment(e.target.value)}
-              fullWidth
-              multiline
-              rows={3}
-              size="small"
+            <FormControlLabel
+              label="Notify Customer"
+              control={
+                <Checkbox
+                  checked={approveForm.notifyCustomer}
+                  onChange={(e) => setApproveForm({ ...approveForm, notifyCustomer: e.target.checked })}
+                />
+              }
             />
-
-          </Stack>
+            <Box display="flex" justifyContent="flex-end" gap={2} mt={1}>
+              <Button variant="outlined" onClick={() => setApproveDialog(false)}>Cancel</Button>
+              <Button variant="contained" color="success" onClick={handleApprove}>Approve</Button>
+            </Box>
+          </Box>
         </DialogContent>
-
-        <DialogActions>
-          <Button onClick={() => setOpenStatusModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="contained" onClick={handleUpdateStatus}>
-            Update
-          </Button>
-        </DialogActions>
       </Dialog>
 
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialog} onClose={() => setRejectDialog(false)} maxWidth="sm" fullWidth>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={-3}>
+          <DialogTitle>Reject Return</DialogTitle>
+          <IconButton onClick={() => setRejectDialog(false)} sx={{ mr: 4, "&:hover": { color: "error.main" } }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
+            <TextField
+              label="Rejection Reason"
+              multiline rows={2} fullWidth size="small"
+              value={rejectForm.rejectionReason}
+              onChange={(e) => setRejectForm({ ...rejectForm, rejectionReason: e.target.value })}
+            />
+            <TextField
+              label="Admin Notes"
+              multiline rows={3} fullWidth size="small"
+              value={rejectForm.adminNotes}
+              onChange={(e) => setRejectForm({ ...rejectForm, adminNotes: e.target.value })}
+            />
+            <FormControlLabel
+              label="Notify Customer"
+              control={
+                <Checkbox
+                  checked={rejectForm.notifyCustomer}
+                  onChange={(e) => setRejectForm({ ...rejectForm, notifyCustomer: e.target.checked })}
+                />
+              }
+            />
+            <Box display="flex" justifyContent="flex-end" gap={2} mt={1}>
+              <Button variant="outlined" onClick={() => setRejectDialog(false)}>Cancel</Button>
+              <Button variant="contained" color="error" onClick={handleReject}>Reject</Button>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
