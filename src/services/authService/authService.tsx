@@ -258,26 +258,26 @@ export async function rejectReturn(id: any, payload: object) {
   return await postApi(url, payload);
 }
 export async function getCoupons(reqParams: any) {
-  const url = URL_UTILITY.adminUrl + `coupons` + reqParams;
+  const url = URL_UTILITY.adminUrl + `coupon/coupons` + reqParams;
   return await getApi(url);
 }
 export async function createCoupon(payload: object) {
-  const url = URL_UTILITY.adminUrl + `api`;
+  const url = URL_UTILITY.adminUrl + `/coupon`;
   return await postApi(url, payload);
 }
 export async function bulkCreateCoupon(payload: object) {
-  const url = URL_UTILITY.adminUrl + `coupons/bulk`;
+  const url = URL_UTILITY.adminUrl + `coupon/bulk`;
   return await postApi(url, payload);
 }
 export async function deleteCoupon(id: any) {
-  const url = URL_UTILITY.adminUrl + `api/${id}`;
+  const url = URL_UTILITY.adminUrl + `coupon/${id}`;
   return await deleteApi(url);
 }
 export async function updateCoupon(id: any, payload: object) {
-  const url = URL_UTILITY.adminUrl + `api/${id}`;
+  const url = URL_UTILITY.adminUrl + `coupon/${id}`;
   return await putApi(url, payload);
 }
 export async function getCouponUsage(id: any, reqParams: any) {
-  const url = URL_UTILITY.adminUrl + `api/${id}/usage` + reqParams;
+  const url = URL_UTILITY.adminUrl + `coupon/${id}/usage` + reqParams;
   return await getApi(url);
 }

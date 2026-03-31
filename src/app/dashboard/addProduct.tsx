@@ -10,7 +10,7 @@ import {
   Switch,
   FormControlLabel,
 } from "@mui/material";
-
+import SnackBarCx from "@/src/utls/snackbar";
 import { addProduct, getCategories } from "@/src/services/authService/authService";
 import CloseIcon from "@mui/icons-material/Close";
 import { IconButton } from "@mui/material";
@@ -70,10 +70,38 @@ const initialState: ProductForm = {
   returnable: true,
 };
 
+type Variant = {
+  size: string;
+  color: string;
+  mrp: string;
+  sellingPrice: string;
+  costPrice: string;
+  initialStock: string;
+  profitMargin: string;
+};
+
 export default function AddProductPage({ onClose }: AddProductPageProps) {
   const [form, setForm] = useState<ProductForm>(initialState);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [variants, setVariants] = useState<Variant[]>([
+    {
+      size: "",
+      color: "",
+      mrp: "",
+      sellingPrice: "",
+      costPrice: "",
+      initialStock: "",
+      profitMargin: "",
+    },
+  ]);
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning";
+  }>({ open: false, message: "", severity: "success" });
 
   // useEffect(() => {
   //   fetchCategories();
@@ -86,6 +114,31 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
 
   const handleChange = (field: keyof ProductForm, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleVariantChange = (index: number, field: keyof Variant, value: any) => {
+    const updated = [...variants];
+    updated[index][field] = value;
+    setVariants(updated);
+  };
+
+  const addVariant = () => {
+    setVariants((prev) => [
+      ...prev,
+      {
+        size: "",
+        color: "",
+        mrp: "",
+        sellingPrice: "",
+        costPrice: "",
+        initialStock: "",
+        profitMargin: "",
+      },
+    ]);
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,7 +170,15 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         tax_percent: Number(form.tax_percent),
         cod_available: form.cod_available,
         delivery_days: Number(form.delivery_days),
-        variants: [],
+        variants: variants.map((v) => ({
+          size: v.size,
+          color: v.color,
+          mrp: Number(v.mrp),
+          sellingPrice: Number(v.sellingPrice),
+          costPrice: Number(v.costPrice),
+          initialStock: Number(v.initialStock),
+          profitMargin: Number(v.profitMargin),
+        })),
       };
 
       const formData = new FormData();
@@ -135,11 +196,17 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
 
       await addProduct(formData);
 
-      alert("Product Added Successfully");
+      // alert("Product Added Successfully");
+      setSnackbar({ open: true, message: "Product added successfully!", severity: "success" });
       setForm(initialState);
-      onClose();
-    } catch (err) {
+      // onClose();
+      setTimeout(() => {
+        setForm(initialState);
+        onClose();
+      }, 3500);
+    } catch (err: any) {
       console.error(err);
+      setSnackbar({ open: true, message: err?.message || "Failed to add product.", severity: "error" });
     } finally {
       setLoading(false);
     }
@@ -303,6 +370,110 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         </Box>
       </Box>
 
+      {/* VARIANTS */}
+      <Box
+        sx={{
+          background: "#ffffff",
+          p: 3,
+          borderRadius: 3,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
+          mb: 3,
+        }}
+      >
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography fontWeight={600}>Product Variants</Typography>
+
+          <Button variant="outlined" onClick={addVariant}>
+            Add Variant
+          </Button>
+        </Box>
+
+        {variants.map((variant, index) => (
+          <Box
+            key={index}
+            sx={{
+              mb: 2,
+              p: 2,
+              border: "1px solid #e2e8f0",
+              borderRadius: 2,
+            }}
+          >
+            <Box display="grid" gridTemplateColumns="repeat(3, 1fr)" gap={2}>
+              <TextField
+                label="Size"
+                value={variant.size}
+                onChange={(e) =>
+                  handleVariantChange(index, "size", e.target.value)
+                }
+              />
+
+              <TextField
+                label="Color"
+                value={variant.color}
+                onChange={(e) =>
+                  handleVariantChange(index, "color", e.target.value)
+                }
+              />
+
+              <TextField
+                label="MRP"
+                type="number"
+                value={variant.mrp}
+                onChange={(e) =>
+                  handleVariantChange(index, "mrp", e.target.value)
+                }
+              />
+
+              <TextField
+                label="Selling Price"
+                type="number"
+                value={variant.sellingPrice}
+                onChange={(e) =>
+                  handleVariantChange(index, "sellingPrice", e.target.value)
+                }
+              />
+
+              <TextField
+                label="Cost Price"
+                type="number"
+                value={variant.costPrice}
+                onChange={(e) =>
+                  handleVariantChange(index, "costPrice", e.target.value)
+                }
+              />
+
+              <TextField
+                label="Initial Stock"
+                type="number"
+                value={variant.initialStock}
+                onChange={(e) =>
+                  handleVariantChange(index, "initialStock", e.target.value)
+                }
+              />
+
+              <TextField
+                label="Profit Margin"
+                type="number"
+                value={variant.profitMargin}
+                onChange={(e) =>
+                  handleVariantChange(index, "profitMargin", e.target.value)
+                }
+              />
+            </Box>
+
+            <Box mt={1} textAlign="right">
+              <Button
+                color="error"
+                size="small"
+                onClick={() => removeVariant(index)}
+              >
+                Remove
+              </Button>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+
       {/* SETTINGS */}
       <Box
         sx={{
@@ -426,6 +597,13 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
           {loading ? "Saving..." : "Add Product"}
         </Button>
       </Box>
+
+      <SnackBarCx
+        open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+      />
     </Box>
   );
 }
