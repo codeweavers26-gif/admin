@@ -136,15 +136,15 @@ export default function UserPage() {
     setCartLoading(true);
 
     try {
-      const [ordersRes, returnsRes, cartRes] = await Promise.all([
+      const [ordersRes] = await Promise.all([
         getOrdersByUserId(user.id),
-        getReturnsByUserId(user.id),
-        getCartbyUserId(user.id),
+        // getReturnsByUserId(user.id),
+        // getCartbyUserId(user.id),
       ]);
 
       if (ordersRes) setOrders(ordersRes.content);
-      if (returnsRes) setReturns(returnsRes.content);
-      if (cartRes) setCart(cartRes);
+      // if (returnsRes) setReturns(returnsRes.content);
+      // if (cartRes) setCart(cartRes);
     } catch (err) {
       console.error("Error fetching orders/returns");
     } finally {

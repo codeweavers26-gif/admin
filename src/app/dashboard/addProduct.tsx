@@ -156,8 +156,8 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         sku: form.sku,
         slug: form.slug,
         description: form.description,
-        mrp: Number(form.mrp),
-        price: Number(form.price),
+        // mrp: Number(form.mrp),
+        // price: Number(form.price),
         stock: Number(form.stock),
         weight: Number(form.weight),
         length: Number(form.length),
@@ -166,7 +166,7 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         returnable: form.returnable,
         categoryId: Number(form.categoryId),
         short_description: form.short_description,
-        discount_percent: Number(form.discount_percent),
+        // discount_percent: Number(form.discount_percent),
         tax_percent: Number(form.tax_percent),
         cod_available: form.cod_available,
         delivery_days: Number(form.delivery_days),
@@ -311,21 +311,21 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         </Typography>
 
         <Box display="grid" gridTemplateColumns="repeat(3, 1fr)" gap={2}>
-          <TextField label="MRP" type="number"
+          {/* <TextField label="MRP" type="number"
             value={form.mrp}
             onChange={(e) => handleChange("mrp", e.target.value)} />
 
           <TextField label="Price" type="number"
             value={form.price}
-            onChange={(e) => handleChange("price", e.target.value)} />
+            onChange={(e) => handleChange("price", e.target.value)} /> */}
 
           <TextField label="Stock" type="number"
             value={form.stock}
             onChange={(e) => handleChange("stock", e.target.value)} />
-
+          {/* 
           <TextField label="Discount %" type="number"
             value={form.discount_percent}
-            onChange={(e) => handleChange("discount_percent", e.target.value)} />
+            onChange={(e) => handleChange("discount_percent", e.target.value)} /> */}
 
           <TextField label="Tax %" type="number"
             value={form.tax_percent}

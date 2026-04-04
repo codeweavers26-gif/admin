@@ -14,7 +14,14 @@ export async function adminLogin(payload: {
   const url = URL_UTILITY.authUrl + "admin/login";
   return await postApi(url, payload);
 }
-
+export async function sendOtpApi(payload: any) {
+  const url = URL_UTILITY.authUrl + "request-otp";
+  return await postApi(url, payload);
+}
+export async function verifyOtpApi(payload: any) {
+  const url = URL_UTILITY.authUrl + "verify-otp";
+  return await postApi(url, payload);
+}
 export async function refereshToken(payload: {
   refreshToken: string;
 }) {
@@ -262,7 +269,7 @@ export async function getCoupons(reqParams: any) {
   return await getApi(url);
 }
 export async function createCoupon(payload: object) {
-  const url = URL_UTILITY.adminUrl + `/coupon`;
+  const url = URL_UTILITY.adminUrl + `coupon`;
   return await postApi(url, payload);
 }
 export async function bulkCreateCoupon(payload: object) {
@@ -280,4 +287,16 @@ export async function updateCoupon(id: any, payload: object) {
 export async function getCouponUsage(id: any, reqParams: any) {
   const url = URL_UTILITY.adminUrl + `coupon/${id}/usage` + reqParams;
   return await getApi(url);
+}
+export async function addCatalogCategory(payload: object) {
+  const url = URL_UTILITY.adminUrl + `catalog`;
+  return await postApi(url, payload);
+}
+export async function updateCatalogCategory(id: any, payload: object) {
+  const url = URL_UTILITY.adminUrl + `catalog/${id}`;
+  return await putApi(url, payload);
+}
+export async function deleteCatalogCategory(id: any) {
+  const url = URL_UTILITY.adminUrl + `catalog/${id}`;
+  return await deleteApi(url);
 }
