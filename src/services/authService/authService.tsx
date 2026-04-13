@@ -289,7 +289,7 @@ export async function getCouponUsage(id: any, reqParams: any) {
   return await getApi(url);
 }
 export async function addCatalogCategory(payload: object) {
-  const url = URL_UTILITY.adminUrl + `catalog`;
+  const url = URL_UTILITY.adminUrl + `catalog/categories`;
   return await postApi(url, payload);
 }
 export async function updateCatalogCategory(id: any, payload: object) {
