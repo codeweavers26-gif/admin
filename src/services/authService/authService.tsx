@@ -129,7 +129,7 @@ export async function addSection(payload: any) {
   return await postApi(url, payload);
 }
 export async function getCategories(sec_id: string) {
-  const url = URL_UTILITY.adminUrl + `catalog/sections/${sec_id}/categories`;
+  const url = URL_UTILITY.adminUrl + `catalog/categories?sectionId=${sec_id}`;
   return await getApi(url);
 }
 export async function addCategory(payload: any) {

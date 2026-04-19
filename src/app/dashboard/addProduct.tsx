@@ -172,6 +172,15 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
   };
 
   const handleSubmit = async () => {
+    if (!selectedSectionId) {
+      setSnackbar({ open: true, message: "Please select a Section.", severity: "error" });
+      return;
+    }
+    if (!form.categoryId || Number(form.categoryId) === 0) {
+      setSnackbar({ open: true, message: "Please select a Category.", severity: "error" });
+      return;
+    }
+
     try {
       setLoading(true);
 
