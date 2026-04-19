@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Button,
   TextField,
   Typography,
-  MenuItem,
   Switch,
   FormControlLabel,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  CircularProgress,
 } from "@mui/material";
 import SnackBarCx from "@/src/utls/snackbar";
-import { addProduct, getCategories } from "@/src/services/authService/authService";
+import { addProduct, getSections, getCategories } from "@/src/services/authService/authService";
 import CloseIcon from "@mui/icons-material/Close";
 import { IconButton } from "@mui/material";
 
@@ -19,55 +23,44 @@ interface AddProductPageProps {
   onClose: () => void;
 }
 
-interface Category {
-  id: number;
-  name: string;
-}
-
 interface ProductForm {
   name: string;
   brand: string;
+  sku: string;
   slug: string;
   description: string;
-  mrp: string;
-  price: string;
-  stock: string;
-  categoryId: string;
   short_description: string;
-  discount_percent: string;
-  tax_percent: string;
-  cod_available: boolean;
-  delivery_days: string;
-  images: File[];
-  sku: string;
+  stock: string;
   weight: string;
   length: string;
   width: string;
   height: string;
   returnable: boolean;
+  categoryId: string;
+  tax_percent: string;
+  cod_available: boolean;
+  delivery_days: string;
+  images: File[];
 }
 
 const initialState: ProductForm = {
   name: "",
   brand: "",
+  sku: "",
   slug: "",
   description: "",
-  mrp: "",
-  price: "",
-  stock: "",
-  categoryId: "1",
   short_description: "",
-  discount_percent: "",
-  tax_percent: "",
-  cod_available: true,
-  delivery_days: "",
-  images: [],
-  sku: "",
+  stock: "",
   weight: "",
   length: "",
   width: "",
   height: "",
   returnable: true,
+  categoryId: "",
+  tax_percent: "",
+  cod_available: true,
+  delivery_days: "",
+  images: [],
 };
 
 type Variant = {
@@ -82,8 +75,42 @@ type Variant = {
 
 export default function AddProductPage({ onClose }: AddProductPageProps) {
   const [form, setForm] = useState<ProductForm>(initialState);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Section → Category dropdowns
+  const [sections, setSections] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [selectedSectionId, setSelectedSectionId] = useState<string>("");
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  useEffect(() => {
+    setSectionsLoading(true);
+    getSections()
+      .then((res: any) => {
+        const data = res?.data || res;
+        setSections(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setSections([]))
+      .finally(() => setSectionsLoading(false));
+  }, []);
+
+  const handleSectionChange = async (sectionId: string) => {
+    setSelectedSectionId(sectionId);
+    handleChange("categoryId", "");
+    setCategories([]);
+    if (!sectionId) return;
+    setCategoriesLoading(true);
+    try {
+      const res: any = await getCategories(sectionId);
+      const data = res?.data || res;
+      setCategories(Array.isArray(data) ? data : []);
+    } catch {
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
 
   const [variants, setVariants] = useState<Variant[]>([
     {
@@ -102,15 +129,6 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
     message: string;
     severity: "success" | "error" | "warning";
   }>({ open: false, message: "", severity: "success" });
-
-  // useEffect(() => {
-  //   fetchCategories();
-  // }, []);
-
-  // const fetchCategories = async () => {
-  //   const res = await getCategories();
-  //   if (res) setCategories(res);
-  // };
 
   const handleChange = (field: keyof ProductForm, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -146,6 +164,13 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
     handleChange("images", files);
   };
 
+  const handleRemoveImage = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
+
   const handleSubmit = async () => {
     try {
       setLoading(true);
@@ -156,8 +181,7 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         sku: form.sku,
         slug: form.slug,
         description: form.description,
-        // mrp: Number(form.mrp),
-        // price: Number(form.price),
+        short_description: form.short_description,
         stock: Number(form.stock),
         weight: Number(form.weight),
         length: Number(form.length),
@@ -165,8 +189,6 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         height: Number(form.height),
         returnable: form.returnable,
         categoryId: Number(form.categoryId),
-        short_description: form.short_description,
-        // discount_percent: Number(form.discount_percent),
         tax_percent: Number(form.tax_percent),
         cod_available: form.cod_available,
         delivery_days: Number(form.delivery_days),
@@ -196,10 +218,8 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
 
       await addProduct(formData);
 
-      // alert("Product Added Successfully");
       setSnackbar({ open: true, message: "Product added successfully!", severity: "success" });
       setForm(initialState);
-      // onClose();
       setTimeout(() => {
         setForm(initialState);
         onClose();
@@ -210,13 +230,6 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
   };
 
   return (
@@ -276,13 +289,46 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
           <TextField label="SKU" value={form.sku}
             onChange={(e) => handleChange("sku", e.target.value)} />
 
+          {/* Section dropdown */}
+          <FormControl fullWidth>
+            <InputLabel>Section</InputLabel>
+            <Select
+              value={selectedSectionId}
+              label="Section"
+              onChange={(e) => handleSectionChange(e.target.value as string)}
+              disabled={sectionsLoading}
+              endAdornment={sectionsLoading ? <CircularProgress size={18} sx={{ mr: 2 }} /> : null}
+            >
+              <MenuItem value=""><em>-- Select Section --</em></MenuItem>
+              {sections.map((s) => (
+                <MenuItem key={s.id} value={String(s.id)}>{s.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Category dropdown */}
+          <FormControl fullWidth>
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={form.categoryId}
+              label="Category"
+              onChange={(e) => handleChange("categoryId", e.target.value)}
+              disabled={!selectedSectionId || categoriesLoading}
+              endAdornment={categoriesLoading ? <CircularProgress size={18} sx={{ mr: 2 }} /> : null}
+            >
+              <MenuItem value=""><em>-- Select Category --</em></MenuItem>
+              {categories.map((c) => (
+                <MenuItem key={c.id} value={String(c.id)}>{c.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <TextField
             label="Short Description"
             multiline
             rows={2}
             value={form.short_description}
             onChange={(e) => handleChange("short_description", e.target.value)}
-            sx={{ gridColumn: "span 2" }}
           />
 
           <TextField
@@ -296,7 +342,7 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         </Box>
       </Box>
 
-      {/* PRICING */}
+      {/* PRICING & STOCK */}
       <Box
         sx={{
           background: "#ffffff",
@@ -307,25 +353,13 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         }}
       >
         <Typography fontWeight={600} mb={2}>
-          Pricing & Stock
+          Stock & Delivery
         </Typography>
 
         <Box display="grid" gridTemplateColumns="repeat(3, 1fr)" gap={2}>
-          {/* <TextField label="MRP" type="number"
-            value={form.mrp}
-            onChange={(e) => handleChange("mrp", e.target.value)} />
-
-          <TextField label="Price" type="number"
-            value={form.price}
-            onChange={(e) => handleChange("price", e.target.value)} /> */}
-
           <TextField label="Stock" type="number"
             value={form.stock}
             onChange={(e) => handleChange("stock", e.target.value)} />
-          {/* 
-          <TextField label="Discount %" type="number"
-            value={form.discount_percent}
-            onChange={(e) => handleChange("discount_percent", e.target.value)} /> */}
 
           <TextField label="Tax %" type="number"
             value={form.tax_percent}
