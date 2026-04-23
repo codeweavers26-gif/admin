@@ -4,6 +4,8 @@ import { addProduct } from "@/src/services/authService/authService";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+type ProductTag = "NEW_ARRIVAL" | "TRENDING" | "FEATURED" | "BEST_SELLER" | "";
+
 interface Product {
   name: string;
   brand: string;
@@ -24,6 +26,7 @@ interface Product {
   tax_percent: string;
   cod_available: boolean;
   delivery_days: string;
+  tag: ProductTag;
 }
 
 const initalProduct: Product = {
@@ -46,6 +49,7 @@ const initalProduct: Product = {
   tax_percent: "",
   cod_available: true,
   delivery_days: "",
+  tag: "",
 }
 
 export default function AddProductPage() {
@@ -72,7 +76,8 @@ export default function AddProductPage() {
     // );
 
     try {
-      const payload = [product]
+      const productPayload = { ...product, tag: product.tag || undefined };
+      const payload = [productPayload]
       const res = await addProduct(payload)
       if (res.status === 200) {
       }
@@ -207,6 +212,24 @@ export default function AddProductPage() {
           style={input}
         // required
         />
+        {/* Section Tag Dropdown */}
+        <div style={{ marginBottom: 15 }}>
+          <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 600, color: "#555" }}>
+            Section Tag
+          </label>
+          <select
+            value={product.tag}
+            onChange={(e) => handleChange('tag', e.target.value)}
+            style={{ ...input, marginBottom: 0, color: product.tag ? "#000" : "#999" }}
+          >
+            <option value="">— No Section —</option>
+            <option value="NEW_ARRIVAL">🆕 New Arrival</option>
+            <option value="TRENDING">🔥 Trending Now</option>
+            <option value="FEATURED">⭐ Featured Collection</option>
+            <option value="BEST_SELLER">🏆 Best Seller</option>
+          </select>
+        </div>
+
         <div style={checkboxContainer}>
           <label style={checkboxLabel}>
             <input
