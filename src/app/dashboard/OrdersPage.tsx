@@ -297,13 +297,12 @@ export default function UserPage() {
   const handleConfirmStatusUpdate = async (orderId: any, status: string) => {
     try {
       setLoading(true);
-      const payload = {
-        status: newStatus
-      }
-      await updateOrderStatus(orderId, payload);
+      await updateOrderStatus(orderId, { status: newStatus });
       setStatusDialogOpen(false);
       getOrdersData();
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || "Failed to update status";
+      alert("Error: " + msg);
       console.error("Failed to update order status", error);
     } finally {
       setLoading(false);
@@ -517,25 +516,37 @@ export default function UserPage() {
         <DialogTitle>Update Order Status</DialogTitle>
 
         <DialogContent sx={{ mt: 1 }}>
+          {statusOrder && (
+            <Box mb={2} px={1.5} py={1} bgcolor="#f5f5f5" borderRadius={1}>
+              <Typography fontSize={12} color="text.secondary">
+                Order #{statusOrder.orderId} &nbsp;·&nbsp; Current:{" "}
+                <strong>{statusOrder.status}</strong>
+              </Typography>
+            </Box>
+          )}
+
           <TextField
             select
             fullWidth
             size="small"
-            label="Status"
+            label="New Status"
             value={newStatus}
             onChange={(e) => setNewStatus(e.target.value)}
           >
-            <MenuItem value="placed">Placed</MenuItem>
+            <MenuItem value="PENDING">Pending</MenuItem>
+            <MenuItem value="PLACED">Placed</MenuItem>
             <MenuItem value="PAID">Paid</MenuItem>
-            <MenuItem value="shipped">Shipped</MenuItem>
-            <MenuItem value="delivered">Delivered</MenuItem>
-            <MenuItem value="return_requested">Return Requested</MenuItem>
+            <MenuItem value="SHIPPED">Shipped</MenuItem>
+            <MenuItem value="DELIVERED">Delivered ✓</MenuItem>
+            <MenuItem value="CANCELLED">Cancelled</MenuItem>
+            <MenuItem value="RETURN_REQUESTED">Return Requested</MenuItem>
           </TextField>
 
           <Stack direction="row" justifyContent="flex-end" spacing={1} mt={3}>
             <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
             <Button
               variant="contained"
+              color={newStatus === "DELIVERED" ? "success" : "primary"}
               onClick={() => handleConfirmStatusUpdate(statusOrder!.orderId, newStatus)}
             >
               Update
