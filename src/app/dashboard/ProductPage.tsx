@@ -156,24 +156,25 @@ export default function ProductPage() {
         </Tooltip>
       ),
     },
-    {
-      header: "Add Images",
-      size: 100,
-      Cell: ({ row }) => (
-        <Tooltip title="Add Images">
-          <IconButton
-            color="secondary"
-            size="small"
-            onClick={() => {
-              setSelectedImageProductId(row.original.id);
-              setImageDialogOpen(true);
-            }}
-          >
-            <PhotoCameraIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      ),
-    },
+    // "Add Images" column removed — images are managed per-variant
+    // {
+    //   header: "Add Images",
+    //   size: 100,
+    //   Cell: ({ row }) => (
+    //     <Tooltip title="Add Images">
+    //       <IconButton
+    //         color="secondary"
+    //         size="small"
+    //         onClick={() => {
+    //           setSelectedImageProductId(row.original.id);
+    //           setImageDialogOpen(true);
+    //         }}
+    //       >
+    //         <PhotoCameraIcon fontSize="small" />
+    //       </IconButton>
+    //     </Tooltip>
+    //   ),
+    // },
     {
       header: "Edit",
       size: 80,

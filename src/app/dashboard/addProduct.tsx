@@ -620,8 +620,8 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         />
       </Box>
 
-      {/* IMAGES */}
-      <Box
+      {/* IMAGES — disabled; product images are served from variant images */}
+      {/* <Box
         sx={{
           background: "#ffffff",
           p: 3,
@@ -684,7 +684,7 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
             </Box>
           ))}
         </Box>
-      </Box>
+      </Box> */}
 
       {/* SUBMIT */}
       <Box display="flex" justifyContent="flex-end">
