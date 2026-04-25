@@ -4,7 +4,7 @@ import { Box, Chip, Typography, Button, Dialog, DialogContent, DialogTitle, Icon
 import CloseIcon from "@mui/icons-material/Close";
 import { MantineReactTable, MRT_ColumnDef, useMantineReactTable, } from "mantine-react-table";
 import type { ExpandedState } from '@tanstack/react-table';
-import { activateProductbyId, addImages, addVarients, deactivateProductbyId, deactivateVariantById, getProduct, getProductById } from "@/src/services/authService/authService";
+import { activateProductbyId, addImages, addVarients, deactivateProductbyId, deactivateVariantById, getProduct, getProductById, uploadVariantImage } from "@/src/services/authService/authService";
 import AddIcon from '@mui/icons-material/Add';
 import AddProductPage from "./addProduct";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -287,6 +287,46 @@ export default function ProductPage() {
                         </IconButton>
                       </Tooltip>
                     </Box>
+                  </Box>
+
+                  {/* Variant Image */}
+                  <Box display="flex" alignItems="center" gap={2} mt={1}>
+                    {variant.imageUrl ? (
+                      <Box
+                        component="img"
+                        src={variant.imageUrl}
+                        sx={{ width: 64, height: 64, objectFit: "cover", borderRadius: 1, border: "1px solid #e2e8f0" }}
+                      />
+                    ) : (
+                      <Box sx={{ width: 64, height: 64, borderRadius: 1, border: "1px dashed #ccc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <PhotoCameraIcon sx={{ color: "#ccc", fontSize: 24 }} />
+                      </Box>
+                    )}
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      component="label"
+                      startIcon={<PhotoCameraIcon />}
+                    >
+                      {variant.imageUrl ? "Change Image" : "Add Image"}
+                      <input
+                        hidden
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            await uploadVariantImage(variant.id, file);
+                            alert("Variant image uploaded!");
+                            const res = await getProductById(productId);
+                            setVariantsMap((prev) => ({ ...prev, [productId]: res?.variants || [] }));
+                          } catch (err) {
+                            alert("Failed to upload image");
+                          }
+                        }}
+                      />
+                    </Button>
                   </Box>
 
                   {/* Size & Color */}

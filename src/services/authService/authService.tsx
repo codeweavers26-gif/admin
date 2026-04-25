@@ -224,6 +224,12 @@ export async function deactivateVariantById(id: any) {
   const url = URL_UTILITY.adminUrl + `products/variants/${id}`;
   return await deleteApi(url);
 }
+export async function uploadVariantImage(variantId: number, imageFile: File) {
+  const url = URL_UTILITY.adminUrl + `products/variants/${variantId}/image`;
+  const formData = new FormData();
+  formData.append("image", imageFile);
+  return await postApi(url, formData);
+}
 export async function getWarehouses() {
   const url = URL_UTILITY.adminUrl + `warehouses`;
   return await getApi(url);

@@ -15,7 +15,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import SnackBarCx from "@/src/utls/snackbar";
-import { addProduct, getSections, getCategories } from "@/src/services/authService/authService";
+import { addProduct, getSections, getCategories, uploadVariantImage } from "@/src/services/authService/authService";
 import CloseIcon from "@mui/icons-material/Close";
 import { IconButton } from "@mui/material";
 
@@ -75,6 +75,8 @@ type Variant = {
   costPrice: string;
   initialStock: string;
   profitMargin: string;
+  imageFile?: File;
+  imagePreview?: string;
 };
 
 export default function AddProductPage({ onClose }: AddProductPageProps) {
@@ -125,6 +127,8 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
       costPrice: "",
       initialStock: "",
       profitMargin: "",
+      imageFile: undefined,
+      imagePreview: undefined,
     },
   ]);
 
@@ -155,8 +159,17 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         costPrice: "",
         initialStock: "",
         profitMargin: "",
+        imageFile: undefined,
+        imagePreview: undefined,
       },
     ]);
+  };
+
+  const handleVariantImageChange = (index: number, file: File) => {
+    const updated = [...variants];
+    updated[index].imageFile = file;
+    updated[index].imagePreview = URL.createObjectURL(file);
+    setVariants(updated);
   };
 
   const removeVariant = (index: number) => {
@@ -230,7 +243,20 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         formData.append("images", file);
       });
 
-      await addProduct(formData);
+      const productResponse: any = await addProduct(formData);
+
+      // Upload variant images if any were selected
+      const createdVariants = productResponse?.data?.variants || productResponse?.variants || [];
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i];
+        if (v.imageFile && createdVariants[i]?.id) {
+          try {
+            await uploadVariantImage(createdVariants[i].id, v.imageFile);
+          } catch (e) {
+            console.warn(`Variant ${i} image upload failed`, e);
+          }
+        }
+      }
 
       setSnackbar({ open: true, message: "Product added successfully!", severity: "success" });
       setForm(initialState);
@@ -523,6 +549,29 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
                   handleVariantChange(index, "profitMargin", e.target.value)
                 }
               />
+            </Box>
+
+            {/* Variant Image */}
+            <Box mt={2} display="flex" alignItems="center" gap={2}>
+              <Button variant="outlined" component="label" size="small">
+                {variant.imagePreview ? "Change Image" : "Add Variant Image"}
+                <input
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleVariantImageChange(index, file);
+                  }}
+                />
+              </Button>
+              {variant.imagePreview && (
+                <Box
+                  component="img"
+                  src={variant.imagePreview}
+                  sx={{ width: 60, height: 60, objectFit: "cover", borderRadius: 1, border: "1px solid #e2e8f0" }}
+                />
+              )}
             </Box>
 
             <Box mt={1} textAlign="right">
