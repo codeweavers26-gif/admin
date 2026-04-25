@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Box, Chip, Typography, Button, Dialog, DialogContent, DialogTitle, IconButton, Tooltip, TextField, } from "@mui/material";
+import { Box, Chip, Typography, Button, Dialog, DialogContent, DialogTitle, IconButton, Tooltip, TextField, MenuItem, FormControl, InputLabel, Select, Switch, FormControlLabel, } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { MantineReactTable, MRT_ColumnDef, useMantineReactTable, } from "mantine-react-table";
 import type { ExpandedState } from '@tanstack/react-table';
-import { activateProductbyId, addImages, addVarients, deactivateProductbyId, deactivateVariantById, getProduct, getProductById, uploadVariantImage } from "@/src/services/authService/authService";
+import { activateProductbyId, addImages, addVarients, deactivateProductbyId, deactivateVariantById, getProduct, getProductById, updateProduct, updateVariantApi, uploadVariantImage } from "@/src/services/authService/authService";
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 import AddProductPage from "./addProduct";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
@@ -78,6 +79,17 @@ export default function ProductPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Edit product
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState<any>({});
+
+  // Edit variant
+  const [editVariantDialogOpen, setEditVariantDialogOpen] = useState(false);
+  const [editingVariant, setEditingVariant] = useState<any>(null);
+  const [editVariantProductId, setEditVariantProductId] = useState<number | null>(null);
+  const [editVariantForm, setEditVariantForm] = useState<any>({});
 
   useEffect(() => {
     fetchProducts(pagination.pageIndex, pagination.pageSize);
@@ -158,6 +170,43 @@ export default function ProductPage() {
             }}
           >
             <PhotoCameraIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
+    {
+      header: "Edit",
+      size: 80,
+      Cell: ({ row }) => (
+        <Tooltip title="Edit Product">
+          <IconButton
+            color="primary"
+            size="small"
+            onClick={() => {
+              const p = row.original;
+              setEditingProduct(p);
+              setEditForm({
+                name: p.name || "",
+                brand: p.brand || "",
+                sku: p.sku || "",
+                slug: p.slug || "",
+                short_description: p.short_description || "",
+                description: p.description || "",
+                tax_percent: p.tax_percent ?? "",
+                weight: p.weight ?? "",
+                length: p.length ?? "",
+                width: p.width ?? "",
+                height: p.height ?? "",
+                cod_available: p.cod_available ?? false,
+                returnable: p.returnable ?? false,
+                delivery_days: p.delivery_days ?? "",
+                tag: (p as any).tag || "",
+                categoryId: p.category?.id ?? "",
+              });
+              setEditDialogOpen(true);
+            }}
+          >
+            <EditIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       ),
@@ -277,6 +326,28 @@ export default function ProductPage() {
                         size="small"
                         color={variant.isActive ? "success" : "default"}
                       />
+                      <Tooltip title="Edit Variant">
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          onClick={() => {
+                            setEditingVariant(variant);
+                            setEditVariantProductId(productId);
+                            setEditVariantForm({
+                              size: variant.size || "",
+                              color: variant.color || "",
+                              mrp: variant.mrp ?? "",
+                              sellingPrice: variant.sellingPrice ?? "",
+                              costPrice: variant.costPrice ?? "",
+                              initialStock: 0,
+                              profitMargin: variant.profitMargin ?? 0,
+                            });
+                            setEditVariantDialogOpen(true);
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Deactivate Variant">
                         <IconButton
                           color="error"
@@ -520,6 +591,64 @@ export default function ProductPage() {
     }
   };
 
+  const handleSaveEditProduct = async () => {
+    if (!editingProduct) return;
+    setLoading(true);
+    try {
+      const payload: any = {
+        name: editForm.name,
+        brand: editForm.brand,
+        sku: editForm.sku,
+        slug: editForm.slug,
+        short_description: editForm.short_description,
+        description: editForm.description,
+        tax_percent: editForm.tax_percent !== "" ? Number(editForm.tax_percent) : null,
+        weight: editForm.weight !== "" ? Number(editForm.weight) : null,
+        length: editForm.length !== "" ? Number(editForm.length) : null,
+        width: editForm.width !== "" ? Number(editForm.width) : null,
+        height: editForm.height !== "" ? Number(editForm.height) : null,
+        cod_available: editForm.cod_available,
+        returnable: editForm.returnable,
+        delivery_days: editForm.delivery_days !== "" ? Number(editForm.delivery_days) : null,
+        categoryId: editForm.categoryId !== "" ? Number(editForm.categoryId) : null,
+        ...(editForm.tag ? { tag: editForm.tag } : {}),
+      };
+      await updateProduct(String(editingProduct.id), payload);
+      alert("Product updated successfully!");
+      setEditDialogOpen(false);
+      fetchProducts(pagination.pageIndex, pagination.pageSize);
+    } catch (err: any) {
+      alert("Failed to update product: " + (err?.message || ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEditVariant = async () => {
+    if (!editingVariant || !editVariantProductId) return;
+    setLoading(true);
+    try {
+      const payload = {
+        size: editVariantForm.size,
+        color: editVariantForm.color,
+        mrp: Number(editVariantForm.mrp),
+        sellingPrice: Number(editVariantForm.sellingPrice),
+        costPrice: editVariantForm.costPrice !== "" ? Number(editVariantForm.costPrice) : 0,
+        initialStock: 0,
+        profitMargin: 0,
+      };
+      await updateVariantApi(editingVariant.id, payload);
+      alert("Variant updated successfully!");
+      setEditVariantDialogOpen(false);
+      const res = await getProductById(editVariantProductId);
+      setVariantsMap((prev) => ({ ...prev, [editVariantProductId]: res?.variants || [] }));
+    } catch (err: any) {
+      alert("Failed to update variant: " + (err?.message || ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deactivateVariant = async (variantId: number, productId: number) => {
     try {
       await deactivateVariantById(variantId);
@@ -743,6 +872,111 @@ export default function ProductPage() {
           </Box>
         </DialogContent>
       </Dialog>
+      {/* Edit Product Dialog */}
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
+        <Box display="flex" justifyContent="space-between" alignItems="center" px={3} pt={2}>
+          <DialogTitle sx={{ p: 0 }}>Edit Product — {editingProduct?.name}</DialogTitle>
+          <IconButton size="small" onClick={() => setEditDialogOpen(false)}><CloseIcon /></IconButton>
+        </Box>
+        <DialogContent>
+          <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} mt={1}>
+            <TextField label="Name" value={editForm.name || ""} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            <TextField label="Brand" value={editForm.brand || ""} onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })} />
+            <TextField label="SKU" value={editForm.sku || ""} onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })} />
+            <TextField label="Slug" value={editForm.slug || ""} onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })} />
+            <TextField label="Short Description" value={editForm.short_description || ""} onChange={(e) => setEditForm({ ...editForm, short_description: e.target.value })} />
+            <TextField label="Category ID" type="number" value={editForm.categoryId || ""} onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })} />
+            <TextField label="Tax %" type="number" value={editForm.tax_percent || ""} onChange={(e) => setEditForm({ ...editForm, tax_percent: e.target.value })} />
+            <TextField label="Delivery Days" type="number" value={editForm.delivery_days || ""} onChange={(e) => setEditForm({ ...editForm, delivery_days: e.target.value })} />
+            <TextField label="Weight (kg)" type="number" value={editForm.weight || ""} onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })} />
+            <TextField label="Length (cm)" type="number" value={editForm.length || ""} onChange={(e) => setEditForm({ ...editForm, length: e.target.value })} />
+            <TextField label="Width (cm)" type="number" value={editForm.width || ""} onChange={(e) => setEditForm({ ...editForm, width: e.target.value })} />
+            <TextField label="Height (cm)" type="number" value={editForm.height || ""} onChange={(e) => setEditForm({ ...editForm, height: e.target.value })} />
+            <FormControl fullWidth>
+              <InputLabel>Section Tag</InputLabel>
+              <Select label="Section Tag" value={editForm.tag || ""} onChange={(e) => setEditForm({ ...editForm, tag: e.target.value })}>
+                <MenuItem value="">None</MenuItem>
+                <MenuItem value="NEW_ARRIVAL">New Arrival</MenuItem>
+                <MenuItem value="TRENDING">Trending</MenuItem>
+                <MenuItem value="FEATURED">Featured</MenuItem>
+                <MenuItem value="BEST_SELLER">Best Seller</MenuItem>
+              </Select>
+            </FormControl>
+            <Box display="flex" gap={3} alignItems="center">
+              <FormControlLabel control={<Switch checked={!!editForm.cod_available} onChange={(e) => setEditForm({ ...editForm, cod_available: e.target.checked })} />} label="COD" />
+              <FormControlLabel control={<Switch checked={!!editForm.returnable} onChange={(e) => setEditForm({ ...editForm, returnable: e.target.checked })} />} label="Returnable" />
+            </Box>
+          </Box>
+          <TextField
+            label="Description"
+            multiline
+            rows={3}
+            fullWidth
+            sx={{ mt: 2 }}
+            value={editForm.description || ""}
+            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+          />
+          <Box display="flex" justifyContent="flex-end" gap={2} mt={3}>
+            <Button variant="outlined" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveEditProduct} disabled={loading}>
+              {loading ? "Saving..." : "Save Changes"}
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Variant Dialog */}
+      <Dialog open={editVariantDialogOpen} onClose={() => setEditVariantDialogOpen(false)} maxWidth="sm" fullWidth>
+        <Box display="flex" justifyContent="space-between" alignItems="center" px={3} pt={2}>
+          <DialogTitle sx={{ p: 0 }}>Edit Variant — {editingVariant?.sku}</DialogTitle>
+          <IconButton size="small" onClick={() => setEditVariantDialogOpen(false)}><CloseIcon /></IconButton>
+        </Box>
+        <DialogContent>
+          <Box display="grid" gap={2} mt={1}>
+            <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
+              <TextField label="Size" value={editVariantForm.size || ""} onChange={(e) => setEditVariantForm({ ...editVariantForm, size: e.target.value })} />
+              <TextField label="Color" value={editVariantForm.color || ""} onChange={(e) => setEditVariantForm({ ...editVariantForm, color: e.target.value })} />
+            </Box>
+            <Box display="grid" gridTemplateColumns="1fr 1fr 1fr" gap={2}>
+              <TextField label="MRP (₹)" type="number" value={editVariantForm.mrp || ""} onChange={(e) => setEditVariantForm({ ...editVariantForm, mrp: e.target.value })} />
+              <TextField label="Selling Price (₹)" type="number" value={editVariantForm.sellingPrice || ""} onChange={(e) => setEditVariantForm({ ...editVariantForm, sellingPrice: e.target.value })} />
+              <TextField label="Cost Price (₹)" type="number" value={editVariantForm.costPrice || ""} onChange={(e) => setEditVariantForm({ ...editVariantForm, costPrice: e.target.value })} />
+            </Box>
+            {/* Variant Image */}
+            <Box>
+              <Typography variant="body2" mb={1} color="text.secondary">Variant Image</Typography>
+              <Box display="flex" alignItems="center" gap={2}>
+                {editingVariant?.imageUrl && (
+                  <Box component="img" src={editingVariant.imageUrl} sx={{ width: 64, height: 64, objectFit: "cover", borderRadius: 1, border: "1px solid #e2e8f0" }} />
+                )}
+                <Button variant="outlined" component="label" size="small" startIcon={<PhotoCameraIcon />}>
+                  {editingVariant?.imageUrl ? "Change Image" : "Add Image"}
+                  <input hidden type="file" accept="image/*" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !editingVariant) return;
+                    try {
+                      await uploadVariantImage(editingVariant.id, file);
+                      const res = await getProductById(editVariantProductId!);
+                      const updatedVariants = res?.variants || [];
+                      setVariantsMap((prev) => ({ ...prev, [editVariantProductId!]: updatedVariants }));
+                      const updated = updatedVariants.find((v: any) => v.id === editingVariant.id);
+                      if (updated) setEditingVariant(updated);
+                      alert("Image updated!");
+                    } catch { alert("Failed to upload image"); }
+                  }} />
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+          <Box display="flex" justifyContent="flex-end" gap={2} mt={3}>
+            <Button variant="outlined" onClick={() => setEditVariantDialogOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveEditVariant} disabled={loading}>
+              {loading ? "Saving..." : "Save Variant"}
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}

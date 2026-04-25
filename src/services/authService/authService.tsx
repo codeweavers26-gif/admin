@@ -56,6 +56,10 @@ export async function updateProduct(id: string, payload: any) {
   const url = URL_UTILITY.adminUrl + `products/${id}`;
   return await putApi(url, payload);
 }
+export async function updateVariantApi(variantId: number, payload: any) {
+  const url = URL_UTILITY.adminUrl + `products/variants/${variantId}`;
+  return await putApi(url, payload);
+}
 export async function deactivateProduct(id: string) {
   const url = URL_UTILITY.adminUrl + `products/${id}`;
   return await deleteApi(url);
