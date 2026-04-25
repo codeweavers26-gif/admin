@@ -23,6 +23,8 @@ interface AddProductPageProps {
   onClose: () => void;
 }
 
+type ProductTag = "NEW_ARRIVAL" | "TRENDING" | "FEATURED" | "BEST_SELLER" | "";
+
 interface ProductForm {
   name: string;
   brand: string;
@@ -41,6 +43,7 @@ interface ProductForm {
   cod_available: boolean;
   delivery_days: string;
   images: File[];
+  tag: ProductTag;
 }
 
 const initialState: ProductForm = {
@@ -61,6 +64,7 @@ const initialState: ProductForm = {
   cod_available: true,
   delivery_days: "",
   images: [],
+  tag: "",
 };
 
 type Variant = {
@@ -201,6 +205,7 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
         tax_percent: Number(form.tax_percent),
         cod_available: form.cod_available,
         delivery_days: Number(form.delivery_days),
+        ...(form.tag ? { tag: form.tag } : {}),
         variants: variants.map((v) => ({
           size: v.size,
           color: v.color,
@@ -329,6 +334,22 @@ export default function AddProductPage({ onClose }: AddProductPageProps) {
               {categories.map((c) => (
                 <MenuItem key={c.id} value={String(c.id)}>{c.name}</MenuItem>
               ))}
+            </Select>
+          </FormControl>
+
+          {/* Section Tag dropdown */}
+          <FormControl fullWidth>
+            <InputLabel>Section Tag</InputLabel>
+            <Select
+              value={form.tag}
+              label="Section Tag"
+              onChange={(e) => handleChange("tag", e.target.value as ProductTag)}
+            >
+              <MenuItem value=""><em>— No Section —</em></MenuItem>
+              <MenuItem value="NEW_ARRIVAL">🆕 New Arrival</MenuItem>
+              <MenuItem value="TRENDING">🔥 Trending Now</MenuItem>
+              <MenuItem value="FEATURED">⭐ Featured Collection</MenuItem>
+              <MenuItem value="BEST_SELLER">🏆 Best Seller</MenuItem>
             </Select>
           </FormControl>
 

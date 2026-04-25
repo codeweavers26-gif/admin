@@ -11,6 +11,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import BlockIcon from "@mui/icons-material/Block";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { toQueryParams } from "@/src/utls/queryUtils";
 
 interface Category {
@@ -74,6 +75,9 @@ export default function ProductPage() {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedImageProductId, setSelectedImageProductId] = useState<number | null>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   useEffect(() => {
     fetchProducts(pagination.pageIndex, pagination.pageSize);
@@ -154,6 +158,24 @@ export default function ProductPage() {
             }}
           >
             <PhotoCameraIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
+    {
+      header: "Delete",
+      size: 80,
+      Cell: ({ row }) => (
+        <Tooltip title="Delete Product">
+          <IconButton
+            color="error"
+            size="small"
+            onClick={() => {
+              setProductToDelete(row.original);
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <DeleteIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       ),
@@ -441,6 +463,23 @@ export default function ProductPage() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
+    setLoading(true);
+    try {
+      await deactivateProductbyId(String(productToDelete.id));
+      alert(`Product "${productToDelete.name}" deleted successfully`);
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+      fetchProducts(pagination.pageIndex, pagination.pageSize);
+    } catch (err) {
+      console.error("Delete failed", err);
+      alert("Failed to delete product");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deactivateVariant = async (variantId: number, productId: number) => {
     try {
       await deactivateVariantById(variantId);
@@ -663,6 +702,43 @@ export default function ProductPage() {
             </Box>
           </Box>
         </DialogContent>
+      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          Confirm Delete
+          <IconButton size="small" onClick={() => setDeleteDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete{" "}
+            <strong>{productToDelete?.name}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mt={1}>
+            This will deactivate the product and hide it from the store.
+          </Typography>
+        </DialogContent>
+        <Box display="flex" justifyContent="flex-end" gap={1} px={3} pb={3}>
+          <Button variant="outlined" onClick={() => setDeleteDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDelete}
+            disabled={loading}
+            startIcon={<DeleteIcon />}
+          >
+            {loading ? "Deleting..." : "Delete"}
+          </Button>
+        </Box>
       </Dialog>
     </>
   );
