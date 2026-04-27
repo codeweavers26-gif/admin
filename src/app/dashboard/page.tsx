@@ -15,6 +15,7 @@ import ReturnPage from "./ReturnPage";
 import CartPage from "./CartPage";
 import WarehousePage from "./WarehousePage";
 import CouponPage from "./CouponPage";
+import PaymentPage from "./PaymentPage";
 
 
 interface DashboardLayoutProps {
@@ -25,7 +26,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'products' | 'coupon' | 'orders' | 'locations' | 'catalog' | 'inventory' | 'warehouse' | 'return' | 'cart'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'products' | 'coupon' | 'orders' | 'locations' | 'catalog' | 'inventory' | 'warehouse' | 'return' | 'cart' | 'payments'>('dashboard');
 
 
   const handleLogout = async () => {
@@ -55,6 +56,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const showCart = () => { setActiveView('cart'); };
   const showWarehouse = () => { setActiveView('warehouse'); };
   const showCoupon = () => { setActiveView('coupon'); };
+  const showPayments = () => { setActiveView('payments'); };
 
   return (
     <div style={appContainer}>
@@ -152,6 +154,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 isCollapsed={isCollapsed}
               />
               <SidebarItem
+                label="Payments"
+                icon="💳"
+                isActive={activeView === 'payments'}
+                onClick={showPayments}
+                isCollapsed={isCollapsed}
+              />
+              <SidebarItem
                 label="Warehouse"
                 icon="🏭"
                 isActive={activeView === 'warehouse'}
@@ -193,6 +202,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {activeView === 'warehouse' && <WarehousePage />}
 
           {activeView === 'coupon' && <CouponPage />}
+
+          {activeView === 'payments' && <PaymentPage />}
 
         </main>
       </div>

@@ -124,6 +124,10 @@ export async function updateOrderStatus(id: any, status: any) {
   const url = URL_UTILITY.adminUrl + `orders/${id}/status`;
   return await putApi(url, status);
 }
+export async function updateOrderPaymentStatus(id: any, paymentStatus: string) {
+  const url = URL_UTILITY.adminUrl + `orders/${id}/payment-status`;
+  return await putApi(url, { paymentStatus });
+}
 export async function getSections() {
   const url = URL_UTILITY.adminUrl + `catalog/sections`;
   return await getApi(url);
