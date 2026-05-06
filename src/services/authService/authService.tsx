@@ -302,6 +302,10 @@ export async function getCouponUsage(id: any, reqParams: any) {
   const url = URL_UTILITY.adminUrl + `coupon/${id}/usage` + reqParams;
   return await getApi(url);
 }
+export async function addCatalogSection(payload: object) {
+  const url = URL_UTILITY.adminUrl + `catalog/sections`;
+  return await postApi(url, payload);
+}
 export async function addCatalogCategory(payload: object) {
   const url = URL_UTILITY.adminUrl + `catalog/categories`;
   return await postApi(url, payload);

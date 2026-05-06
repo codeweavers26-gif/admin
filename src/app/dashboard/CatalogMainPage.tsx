@@ -12,7 +12,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { getCatalogCategories, getCatalogSections, addCatalogCategory, updateCatalogCategory, deleteCatalogCategory } from "@/src/services/authService/authService";
+import { getCatalogCategories, getCatalogSections, addCatalogCategory, addCatalogSection, updateCatalogCategory, deleteCatalogCategory } from "@/src/services/authService/authService";
 
 interface CatalogSection {
   id: number;
@@ -46,6 +46,13 @@ export default function CatalogMainPage() {
   const [addSuccess, setAddSuccess] = useState("");
 
 
+
+  // --- Add Section Modal State ---
+  const [addSecDialogOpen, setAddSecDialogOpen] = useState(false);
+  const [newSecName, setNewSecName] = useState("");
+  const [newSecImageUrl, setNewSecImageUrl] = useState("");
+  const [addSecLoading, setAddSecLoading] = useState(false);
+  const [addSecError, setAddSecError] = useState("");
 
   const [editCatDialogOpen, setEditCatDialogOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<CatalogCategory | null>(null);
@@ -81,6 +88,22 @@ export default function CatalogMainPage() {
       console.error("Error fetching categories", err);
     } finally {
       setCatLoading(false);
+    }
+  };
+
+  const handleAddSection = async () => {
+    if (!newSecName.trim()) { setAddSecError("Section name is required."); return; }
+    setAddSecLoading(true); setAddSecError("");
+    try {
+      await addCatalogSection({ name: newSecName.trim(), imageUrl: newSecImageUrl.trim() });
+      setAddSecDialogOpen(false);
+      setNewSecName(""); setNewSecImageUrl("");
+      fetchSections();
+    } catch (err) {
+      console.error(err);
+      setAddSecError("Failed to add section.");
+    } finally {
+      setAddSecLoading(false);
     }
   };
 
@@ -194,22 +217,29 @@ export default function CatalogMainPage() {
           <Typography variant="h5" fontWeight={600}>Catalog Sections</Typography>
         </Box>
 
-        {/* Add Category Button */}
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenAddDialog}
-          sx={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            borderRadius: 2,
-            textTransform: "none",
-            fontWeight: 600,
-            boxShadow: "0 4px 12px rgba(102,126,234,0.35)",
-            "&:hover": { boxShadow: "0 6px 16px rgba(102,126,234,0.5)" },
-          }}
-        >
-          Add Category
-        </Button>
+        <Box display="flex" gap={1.5}>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => { setNewSecName(""); setNewSecImageUrl(""); setAddSecError(""); setAddSecDialogOpen(true); }}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          >
+            Add Section
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenAddDialog}
+            sx={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              borderRadius: 2, textTransform: "none", fontWeight: 600,
+              boxShadow: "0 4px 12px rgba(102,126,234,0.35)",
+              "&:hover": { boxShadow: "0 6px 16px rgba(102,126,234,0.5)" },
+            }}
+          >
+            Add Category
+          </Button>
+        </Box>
       </Box>
 
       {/* Sections Grid */}
@@ -353,6 +383,24 @@ export default function CatalogMainPage() {
           )}
         </Box>
       )}
+
+      {/* ── Add Section Dialog ── */}
+      <Dialog open={addSecDialogOpen} onClose={() => !addSecLoading && setAddSecDialogOpen(false)} fullWidth maxWidth="xs" PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Add New Section</DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: "12px !important" }}>
+          {addSecError && <Alert severity="error" sx={{ borderRadius: 2 }}>{addSecError}</Alert>}
+          <TextField label="Section Name" value={newSecName} onChange={(e) => setNewSecName(e.target.value)} fullWidth size="small" autoFocus disabled={addSecLoading} />
+          <TextField label="Image URL (optional)" value={newSecImageUrl} onChange={(e) => setNewSecImageUrl(e.target.value)} fullWidth size="small" disabled={addSecLoading} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button onClick={() => setAddSecDialogOpen(false)} disabled={addSecLoading} sx={{ textTransform: "none", borderRadius: 2 }}>Cancel</Button>
+          <Button variant="contained" onClick={handleAddSection} disabled={addSecLoading}
+            startIcon={addSecLoading ? <CircularProgress size={16} color="inherit" /> : <AddIcon />}
+            sx={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", textTransform: "none", borderRadius: 2, fontWeight: 600 }}>
+            {addSecLoading ? "Adding..." : "Add Section"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Add Category Dialog ── */}
       <Dialog
