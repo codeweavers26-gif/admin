@@ -1,9 +1,8 @@
-import { Avatar, Box, Button, Chip, Dialog, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { Avatar, Box, Button, Chip, Dialog, DialogContent, DialogTitle, Divider, IconButton, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { useCallback, useEffect, useState } from "react";
-import { cancelOrder, getOrders, getUsers, updateOrderStatus } from "../../services/authService/authService";
+import { useEffect, useState } from "react";
+import { cancelOrder, getOrders, updateOrderPaymentStatus, updateOrderStatus } from "../../services/authService/authService";
 import { Close } from "@mui/icons-material";
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 
 // interface OrderType {
 //   orderId: string;
@@ -116,6 +115,25 @@ export default function UserPage() {
   //   }
   // ];
 
+  const STATUS_COLORS: Record<string, string> = {
+    PLACED:           "#6366f1",  // indigo
+    PROCESSING:       "#f59e0b",  // amber
+    SHIPPED:          "#3b82f6",  // blue
+    DELIVERED:        "#22c55e",  // green
+    CANCELLED:        "#ef4444",  // red
+    RETURN_REQUESTED: "#8b5cf6",  // purple
+    PAID:             "#10b981",  // emerald
+    PENDING:          "#94a3b8",  // slate
+    PENDING_PAYMENT:  "#f59e0b",
+  };
+
+  /** What the next forward step is for each active status */
+  const NEXT_STEP: Record<string, { label: string; status: string; color: "primary" | "success" | "warning" }> = {
+    PLACED:     { label: "→ Processing", status: "PROCESSING", color: "primary"  },
+    PROCESSING: { label: "→ Shipped",    status: "SHIPPED",    color: "primary"  },
+    SHIPPED:    { label: "✓ Delivered",  status: "DELIVERED",  color: "success"  },
+  };
+
   const columns: GridColDef[] = [
     { field: "orderId", headerName: "Order ID", width: 90 },
     {
@@ -128,39 +146,40 @@ export default function UserPage() {
       )
     },
     {
-      field: "status", headerName: "Status", width: 150,
-      renderCell: (params) => {
-        const statusColors: Record<string, string> = {
-          PENDING: "#f59e0b", PENDING_PAYMENT: "#f59e0b",
-          DELIVERED: "#22c55e", SHIPPED: "#3b82f6",
-          CANCELLED: "#ef4444", PREPAID: "#667eea",
-        };
-        return (
-          <Chip
-            label={params.value}
-            size="small"
-            sx={{
-              bgcolor: statusColors[params.value] ?? "#94a3b8",
-              color: "#fff", fontWeight: 600, fontSize: 11
-            }}
-          />
-        );
-      }
-    },
-    {
-      field: "paymentMethod", headerName: "Payment", width: 110,
+      field: "status", headerName: "Status", width: 155,
       renderCell: (params) => (
         <Chip
           label={params.value}
           size="small"
-          variant="outlined"
-          color={params.value === "COD" ? "warning" : "primary"}
-          sx={{ fontSize: 11 }}
+          sx={{
+            bgcolor: STATUS_COLORS[params.value] ?? "#94a3b8",
+            color: "#fff", fontWeight: 600, fontSize: 11
+          }}
         />
       )
     },
     {
-      field: "totalAmount", headerName: "Total", width: 120,
+      field: "paymentStatus", headerName: "Payment", width: 120,
+      renderCell: (params) => {
+        const ps: string = params.value ?? "—";
+        const pColor: Record<string, string> = {
+          SUCCESS: "#22c55e", COMPLETED: "#22c55e", PAID: "#10b981",
+          PENDING: "#f59e0b", FAILED: "#ef4444", CANCELLED: "#ef4444",
+          REFUND_PENDING: "#8b5cf6",
+        };
+        return (
+          <Box>
+            <Chip label={params.row.paymentMethod} size="small" variant="outlined"
+              color={params.row.paymentMethod === "COD" ? "warning" : "primary"}
+              sx={{ fontSize: 10, height: 18, mr: 0.5 }} />
+            <Chip label={ps} size="small"
+              sx={{ bgcolor: pColor[ps] ?? "#94a3b8", color: "#fff", fontWeight: 600, fontSize: 10, height: 18 }} />
+          </Box>
+        );
+      }
+    },
+    {
+      field: "totalAmount", headerName: "Total", width: 110,
       renderCell: (params) => (
         <Box>
           <Typography fontSize={13} fontWeight={600}>₹{params.value.toLocaleString()}</Typography>
@@ -171,26 +190,62 @@ export default function UserPage() {
       )
     },
     {
-      field: "createdAt", headerName: "Created At", width: 170,
+      field: "createdAt", headerName: "Date", width: 140,
       renderCell: (params) => (
-        <Typography fontSize={12}>{new Date(params.value).toLocaleString()}</Typography>
+        <Typography fontSize={12}>{new Date(params.value).toLocaleString("en-IN", { day: "numeric", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</Typography>
       )
     },
     {
-      field: "actions", headerName: "", width: 300, sortable: false, filterable: false,
-      renderCell: (params) => (
-        <>
-          <Button size="small" variant="outlined" onClick={() => handleViewItems(params.row)} sx={{ minWidth: 90 }}>
-            View Items
-          </Button>
-          <Button size="small" variant="outlined" onClick={() => openStatusModal(params.row)}>
-            Update Status
-          </Button>
-          <Button onClick={() => handleCancelOrder(params.row.orderId)}>
-            <DeleteForeverIcon color="error" />
-          </Button>
-        </>
-      )
+      field: "actions", headerName: "Actions", width: 320, sortable: false, filterable: false,
+      renderCell: (params) => {
+        const { orderId, status, paymentMethod, paymentStatus } = params.row;
+        const next = NEXT_STEP[status];
+        const isCOD = paymentMethod === "COD";
+        const codUnpaid = isCOD && status === "DELIVERED" && paymentStatus !== "PAID" && paymentStatus !== "SUCCESS" && paymentStatus !== "COMPLETED";
+        const canCancel = status === "PLACED" || status === "PROCESSING";
+
+        return (
+          <Box display="flex" gap={0.5} alignItems="center" flexWrap="wrap">
+            <Button size="small" variant="outlined" onClick={() => handleViewItems(params.row)}
+              sx={{ fontSize: 11, px: 1, py: 0.3, minWidth: 72, textTransform: "none" }}>
+              Details
+            </Button>
+
+            {/* Next-step forward button */}
+            {next && (
+              <Tooltip title={`Move to ${next.status}`}>
+                <Button size="small" variant="contained" color={next.color}
+                  onClick={() => handleQuickStatus(orderId, next.status)}
+                  sx={{ fontSize: 11, px: 1, py: 0.3, textTransform: "none" }}>
+                  {next.label}
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* COD: Mark Paid after delivery */}
+            {codUnpaid && (
+              <Tooltip title="Mark cash collected">
+                <Button size="small" variant="contained" color="warning"
+                  onClick={() => handleMarkCodPaid(orderId)}
+                  sx={{ fontSize: 11, px: 1, py: 0.3, textTransform: "none", color: "#fff" }}>
+                  💰 Paid
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Cancel — only for PLACED or PROCESSING */}
+            {canCancel && (
+              <Tooltip title="Cancel order">
+                <Button size="small" variant="outlined" color="error"
+                  onClick={() => handleCancelOrder(orderId)}
+                  sx={{ fontSize: 11, px: 1, py: 0.3, minWidth: 0, textTransform: "none" }}>
+                  ✕ Cancel
+                </Button>
+              </Tooltip>
+            )}
+          </Box>
+        );
+      }
     }
   ];
   // const getOrdersData = useCallback(async () => {
@@ -284,26 +339,27 @@ export default function UserPage() {
     }
   };
 
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [statusOrder, setStatusOrder] = useState<OrderType | null>(null);
-  const [newStatus, setNewStatus] = useState("");
-
-  const openStatusModal = (order: OrderType) => {
-    setStatusOrder(order);
-    setNewStatus(order.status);
-    setStatusDialogOpen(true);
-  };
-
-  const handleConfirmStatusUpdate = async (orderId: any, status: string) => {
+  const handleQuickStatus = async (orderId: number, status: string) => {
     try {
       setLoading(true);
-      await updateOrderStatus(orderId, { status: newStatus });
-      setStatusDialogOpen(false);
+      await updateOrderStatus(orderId, { status });
       getOrdersData();
     } catch (error: any) {
       const msg = error?.response?.data?.message || error?.message || "Failed to update status";
       alert("Error: " + msg);
-      console.error("Failed to update order status", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkCodPaid = async (orderId: number) => {
+    try {
+      setLoading(true);
+      await updateOrderPaymentStatus(orderId, "PAID");
+      getOrdersData();
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || "Failed to mark as paid";
+      alert("Error: " + msg);
     } finally {
       setLoading(false);
     }
@@ -323,13 +379,13 @@ export default function UserPage() {
           sx={{ width: 130 }}
         >
           <MenuItem value="">All</MenuItem>
-          <MenuItem value="paid">Paid</MenuItem>
-          <MenuItem value="shipped">Shipped</MenuItem>
-          <MenuItem value="delivered">Delivered</MenuItem>
-          <MenuItem value="canceled">Canceled</MenuItem>
-          <MenuItem value="placed">Placed</MenuItem>
-          <MenuItem value="return_requested">Return Requested</MenuItem>
-          <MenuItem value="pending">Pending</MenuItem>
+          <MenuItem value="PLACED">Placed</MenuItem>
+          <MenuItem value="PROCESSING">Processing</MenuItem>
+          <MenuItem value="SHIPPED">Shipped</MenuItem>
+          <MenuItem value="DELIVERED">Delivered</MenuItem>
+          <MenuItem value="CANCELLED">Cancelled</MenuItem>
+          <MenuItem value="RETURN_REQUESTED">Return Requested</MenuItem>
+          <MenuItem value="PENDING">Pending (legacy)</MenuItem>
         </TextField>
         <TextField
           label="User ID"
@@ -507,53 +563,6 @@ export default function UserPage() {
 
 
 
-      <Dialog
-        open={statusDialogOpen}
-        onClose={() => setStatusDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Update Order Status</DialogTitle>
-
-        <DialogContent sx={{ mt: 1 }}>
-          {statusOrder && (
-            <Box mb={2} px={1.5} py={1} bgcolor="#f5f5f5" borderRadius={1}>
-              <Typography fontSize={12} color="text.secondary">
-                Order #{statusOrder.orderId} &nbsp;·&nbsp; Current:{" "}
-                <strong>{statusOrder.status}</strong>
-              </Typography>
-            </Box>
-          )}
-
-          <TextField
-            select
-            fullWidth
-            size="small"
-            label="New Status"
-            value={newStatus}
-            onChange={(e) => setNewStatus(e.target.value)}
-          >
-            <MenuItem value="PENDING">Pending</MenuItem>
-            <MenuItem value="PLACED">Placed</MenuItem>
-            <MenuItem value="PAID">Paid</MenuItem>
-            <MenuItem value="SHIPPED">Shipped</MenuItem>
-            <MenuItem value="DELIVERED">Delivered ✓</MenuItem>
-            <MenuItem value="CANCELLED">Cancelled</MenuItem>
-            <MenuItem value="RETURN_REQUESTED">Return Requested</MenuItem>
-          </TextField>
-
-          <Stack direction="row" justifyContent="flex-end" spacing={1} mt={3}>
-            <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
-            <Button
-              variant="contained"
-              color={newStatus === "DELIVERED" ? "success" : "primary"}
-              onClick={() => handleConfirmStatusUpdate(statusOrder!.orderId, newStatus)}
-            >
-              Update
-            </Button>
-          </Stack>
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 }
