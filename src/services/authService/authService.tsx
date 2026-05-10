@@ -201,7 +201,7 @@ export async function getAllReturns() {
   return await getApi(url);
 }
 export async function updateReturnStatus(id: any, payload: any) {
-  const url = URL_UTILITY.adminUrl + `returns/${id}`;
+  const url = URL_UTILITY.adminUrl + `returns/returns/${id}/status`;
   return await putApi(url, payload);
 }
 export async function activateProductbyId(id: any) {
@@ -275,7 +275,7 @@ export async function approveReturn(id: any, payload: object) {
   return await postApi(url, payload);
 }
 export async function rejectReturn(id: any, payload: object) {
-  const url = URL_UTILITY.adminUrl + `returns/returns/${id}/approve`;
+  const url = URL_UTILITY.adminUrl + `returns/returns/${id}/reject`;
   return await postApi(url, payload);
 }
 export async function getCoupons(reqParams: any) {
