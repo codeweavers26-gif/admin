@@ -16,6 +16,7 @@ import CartPage from "./CartPage";
 import WarehousePage from "./WarehousePage";
 import CouponPage from "./CouponPage";
 import PaymentPage from "./PaymentPage";
+import NewsletterPage from "./NewsletterPage";
 
 
 interface DashboardLayoutProps {
@@ -26,7 +27,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'products' | 'coupon' | 'orders' | 'locations' | 'catalog' | 'inventory' | 'warehouse' | 'return' | 'cart' | 'payments'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'users' | 'products' | 'coupon' | 'orders' | 'locations' | 'catalog' | 'inventory' | 'warehouse' | 'return' | 'cart' | 'payments' | 'newsletter'>('dashboard');
 
 
   const handleLogout = async () => {
@@ -57,6 +58,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const showWarehouse = () => { setActiveView('warehouse'); };
   const showCoupon = () => { setActiveView('coupon'); };
   const showPayments = () => { setActiveView('payments'); };
+  const showNewsletter = () => { setActiveView('newsletter'); };
 
   return (
     <div style={appContainer}>
@@ -161,6 +163,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 isCollapsed={isCollapsed}
               />
               <SidebarItem
+                label="Newsletter"
+                icon="📧"
+                isActive={activeView === 'newsletter'}
+                onClick={showNewsletter}
+                isCollapsed={isCollapsed}
+              />
+              <SidebarItem
                 label="Warehouse"
                 icon="🏭"
                 isActive={activeView === 'warehouse'}
@@ -204,6 +213,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {activeView === 'coupon' && <CouponPage />}
 
           {activeView === 'payments' && <PaymentPage />}
+
+          {activeView === 'newsletter' && <NewsletterPage />}
 
         </main>
       </div>
